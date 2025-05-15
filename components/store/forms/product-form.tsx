@@ -71,24 +71,33 @@ export const ProductForm = ({
   const actions = data ? "Save Changes" : "Create";
 
   const form = useForm<z.infer<typeof ProductSchema>>({
-    resolver: zodResolver(ProductSchema),
-    defaultValues: data || {
-      name: "",
-      productImages: [],
-      price: 0,
-      stock: 0,
-      about: "",
-      categoryId: "",
-      colorId: "",
-      sizeId: "",
-      isFeatured: false,
-      isArchieved: false,
-      description: "",
-      materialAndCare: [],
-      sizeAndFit: [],
-      type: ProductType.MEN,
-    },
-  });
+  resolver: zodResolver(ProductSchema),
+  defaultValues: data
+    ? {
+        ...data,
+        sizeId: data.sizeId ?? undefined,
+        colorId: data.colorId ?? undefined,
+        categoryId: data.categoryId ?? undefined,
+        productImages: data.productImages || [],
+        type: data.type ?? ProductType.MEN,
+      }
+    : {
+        name: "",
+        productImages: [],
+        price: 0,
+        stock: 0,
+        about: "",
+        description: "",
+        materialAndCare: [],
+        sizeAndFit: [],
+        categoryId: "",
+        sizeId: "",
+        colorId: "",
+        isFeatured: false,
+        isArchieved: false,
+        type: ProductType.MEN,
+      },
+});
 
   const onSubmit = async (values: z.infer<typeof ProductSchema>) => {
     try {
