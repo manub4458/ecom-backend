@@ -1,15 +1,15 @@
-// app/api/[storeId]/categories/[categoryId]/route.ts
+// app/api/[storeId]/subcategories/[subCategoryId]/route.ts
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { storeId: string; categoryId: string } }
+  { params }: { params: { storeId: string; subCategoryId: string } }
 ) {
   try {
     const session = await auth();
-    const { name, billboardId, bannerImage } = await request.json();
+    const { name, billboardId, bannerImage, categoryId } = await request.json();
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -27,12 +27,16 @@ export async function PATCH(
       return new NextResponse("Banner Image is required", { status: 400 });
     }
 
+    if (!categoryId) {
+      return new NextResponse("Category Id is required", { status: 400 });
+    }
+
     if (!params.storeId) {
       return new NextResponse("Store Id is required", { status: 400 });
     }
 
-    if (!params.categoryId) {
-      return new NextResponse("Category Id is required", { status: 400 });
+    if (!params.subCategoryId) {
+      return new NextResponse("Subcategory Id is required", { status: 400 });
     }
 
     const storeById = await db.store.findUnique({
@@ -45,27 +49,38 @@ export async function PATCH(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    const category = await db.category.update({
+    const category = await db.category.findUnique({
       where: {
-        id: params.categoryId,
+        id: categoryId,
+      },
+    });
+
+    if (!category) {
+      return new NextResponse("Category does not exist", { status: 404 });
+    }
+
+    const subCategory = await db.subCategory.update({
+      where: {
+        id: params.subCategoryId,
       },
       data: {
         name,
         billboardId,
         bannerImage,
+        categoryId,
       },
     });
 
-    return NextResponse.json(category);
+    return NextResponse.json(subCategory);
   } catch (error) {
-    console.log("[CATEGORIES_PATCH]", error);
+    console.log("[SUBCATEGORIES_PATCH]", error);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { storeId: string; categoryId: string } }
+  { params }: { params: { storeId: string; subCategoryId: string } }
 ) {
   try {
     const session = await auth();
@@ -78,8 +93,8 @@ export async function DELETE(
       return new NextResponse("Store Id is required", { status: 400 });
     }
 
-    if (!params.categoryId) {
-      return new NextResponse("Category Id is required", { status: 400 });
+    if (!params.subCategoryId) {
+      return new NextResponse("Subcategory Id is required", { status: 400 });
     }
 
     const storeById = await db.store.findUnique({
@@ -92,55 +107,53 @@ export async function DELETE(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Check for related products or subcategories
+    // Check for related products
     const products = await db.product.findFirst({
-      where: { categoryId: params.categoryId },
-    });
-    const subCategories = await db.subCategory.findFirst({
-      where: { categoryId: params.categoryId },
+      where: { subCategoryId: params.subCategoryId },
     });
 
-    if (products || subCategories) {
+    if (products) {
       return new NextResponse(
-        "Cannot delete category with associated products or subcategories",
+        "Cannot delete subcategory with associated products",
         { status: 400 }
       );
     }
 
-    const category = await db.category.delete({
+    const subCategory = await db.subCategory.delete({
       where: {
-        id: params.categoryId,
+        id: params.subCategoryId,
       },
     });
 
-    return NextResponse.json(category);
+    return NextResponse.json(subCategory);
   } catch (error) {
-    console.log("[CATEGORIES_DELETE]", error);
+    console.log("[SUBCATEGORIES_DELETE]", error);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
 
 export async function GET(
   _request: Request,
-  { params }: { params: { categoryId: string } }
+  { params }: { params: { subCategoryId: string } }
 ) {
   try {
-    if (!params.categoryId) {
-      return new NextResponse("Category Id is required", { status: 400 });
+    if (!params.subCategoryId) {
+      return new NextResponse("Subcategory Id is required", { status: 400 });
     }
 
-    const category = await db.category.findUnique({
+    const subCategory = await db.subCategory.findUnique({
       where: {
-        id: params.categoryId,
+        id: params.subCategoryId,
       },
       include: {
         billboard: true,
+        category: true,
       },
     });
 
-    return NextResponse.json(category);
+    return NextResponse.json(subCategory);
   } catch (error) {
-    console.log("[CATEGORY_GET]", error);
+    console.log("[SUBCATEGORY_GET]", error);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

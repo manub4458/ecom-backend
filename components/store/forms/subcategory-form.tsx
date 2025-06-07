@@ -1,11 +1,10 @@
-// components/store/forms/category-form.tsx
 "use client";
 
 import * as z from "zod";
 import axios from "axios";
 import { toast } from "sonner";
 import { useState } from "react";
-import { BillBoard, Category } from "@prisma/client";
+import { BillBoard, Category, SubCategory } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams, useRouter } from "next/navigation";
@@ -31,49 +30,55 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { AlertModal } from "@/components/modals/alert-modal";
-import { CategoryFormSchema } from "@/schemas/category-form-schema";
+import { SubCategoryFormSchema } from "@/schemas/subcategory-form-schema";
 
-interface CategoryFormProps {
-  data: Category | null;
+interface SubCategoryFormProps {
+  data: SubCategory | null;
   billboards: BillBoard[];
+  categories: Category[];
 }
 
-export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
+export const SubCategoryForm = ({
+  data,
+  billboards,
+  categories,
+}: SubCategoryFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const params = useParams();
   const router = useRouter();
 
-  const title = data ? "Edit Category" : "Create Category";
-  const description = data ? "Edit a category" : "Add a new category";
-  const toastMessage = data ? "Category updated." : "Category created.";
+  const title = data ? "Edit Subcategory" : "Create Subcategory";
+  const description = data ? "Edit a subcategory" : "Add a new subcategory";
+  const toastMessage = data ? "Subcategory updated." : "Subcategory created.";
   const actions = data ? "Save Changes" : "Create";
 
-  const form = useForm<z.infer<typeof CategoryFormSchema>>({
-    resolver: zodResolver(CategoryFormSchema),
+  const form = useForm<z.infer<typeof SubCategoryFormSchema>>({
+    resolver: zodResolver(SubCategoryFormSchema),
     defaultValues: data || {
       name: "",
       bannerImage: "",
       billboardId: "",
+      categoryId: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof CategoryFormSchema>) => {
+  const onSubmit = async (values: z.infer<typeof SubCategoryFormSchema>) => {
     try {
       setLoading(true);
       if (data) {
         await axios.patch(
-          `/api/${params.storeId}/categories/${params.categoryId}`,
+          `/api/${params.storeId}/subcategories/${params.subCategoryId}`,
           values
         );
       } else {
-        await axios.post(`/api/${params.storeId}/categories`, values);
+        await axios.post(`/api/${params.storeId}/subcategories`, values);
       }
       router.refresh();
-      router.push(`/${params.storeId}/categories`);
+      router.push(`/${params.storeId}/subcategories`);
       toast.success(toastMessage);
     } catch (error) {
-      console.error("[CATEGORY_FORM] Error:", error);
+      console.error("[SUBCATEGORY_FORM] Error:", error);
       toast.error("Internal server error");
     } finally {
       setLoading(false);
@@ -84,16 +89,14 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
     try {
       setLoading(true);
       await axios.delete(
-        `/api/${params.storeId}/categories/${params.categoryId}`
+        `/api/${params.storeId}/subcategories/${params.subCategoryId}`
       );
       router.refresh();
-      router.push(`/${params.storeId}/categories`);
-      toast.success("Category deleted");
+      router.push(`/${params.storeId}/subcategories`);
+      toast.success("Subcategory deleted");
     } catch (error) {
-      console.error("[CATEGORY_FORM] Error:", error);
-      toast.error(
-        "Make sure you removed all products and subcategories first."
-      );
+      console.error("[SUBCATEGORY_FORM] Error:", error);
+      toast.error("Make sure you removed all products first.");
     } finally {
       setLoading(false);
     }
@@ -134,7 +137,7 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
                     <Input
                       {...field}
                       disabled={loading}
-                      placeholder="Category name"
+                      placeholder="Subcategory name"
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -182,6 +185,38 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
                       {billboards.map((billboard) => (
                         <SelectItem key={billboard.id} value={billboard.id}>
                           {billboard.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="categoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select
+                    disabled={loading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          defaultValue={field.value}
+                          placeholder="Select a category"
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

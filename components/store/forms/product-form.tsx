@@ -3,14 +3,13 @@
 import * as z from "zod";
 import { useState } from "react";
 import {
-    Category,
-    Color,
-    Product,
-    ProductImage,
-    ProductType,
-    Size
+  Category,
+  Color,
+  Product,
+  ProductImage,
+  Size,
+  SubCategory,
 } from "@prisma/client";
-
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import { toast } from "sonner";
@@ -50,6 +49,7 @@ import Editor from "./editor";
 interface ProductFormProps {
   data: (Product & { productImages: ProductImage[] }) | null;
   categories: Category[];
+  subCategories: SubCategory[];
   sizes: Size[];
   colors: Color[];
 }
@@ -57,6 +57,7 @@ interface ProductFormProps {
 export const ProductForm = ({
   data,
   categories,
+  subCategories,
   sizes,
   colors,
 }: ProductFormProps) => {
@@ -71,40 +72,43 @@ export const ProductForm = ({
   const actions = data ? "Save Changes" : "Create";
 
   const form = useForm<z.infer<typeof ProductSchema>>({
-  resolver: zodResolver(ProductSchema),
-  defaultValues: data
-    ? {
-        ...data,
-        sizeId: data.sizeId ?? undefined,
-        colorId: data.colorId ?? undefined,
-        categoryId: data.categoryId ?? undefined,
-        productImages: data.productImages || [],
-        type: data.type ?? ProductType.MEN,
-      }
-    : {
-        name: "",
-        productImages: [],
-        price: 0,
-        stock: 0,
-        about: "",
-        description: "",
-        materialAndCare: [],
-        sizeAndFit: [],
-        categoryId: "",
-        sizeId: "",
-        colorId: "",
-        isFeatured: false,
-        isArchieved: false,
-        type: ProductType.MEN,
-      },
-});
+    resolver: zodResolver(ProductSchema),
+    defaultValues: data
+      ? {
+          ...data,
+          sizeId: data.sizeId ?? undefined,
+          colorId: data.colorId ?? undefined,
+          categoryId: data.categoryId ?? undefined,
+          subCategoryId: data.subCategoryId ?? undefined,
+          productImages: data.productImages || [],
+        }
+      : {
+          name: "",
+          productImages: [],
+          price: 0,
+          stock: 0,
+          about: "",
+          description: "",
+          materialAndCare: [],
+          sizeAndFit: [],
+          categoryId: "",
+          subCategoryId: "",
+          sizeId: "",
+          colorId: "",
+          isFeatured: false,
+          isArchieved: false,
+        },
+  });
 
   const onSubmit = async (values: z.infer<typeof ProductSchema>) => {
     try {
       setLoading(true);
 
       if (data) {
-        await axios.patch(`/api/${params.storeId}/products/${params.productId}`, values);
+        await axios.patch(
+          `/api/${params.storeId}/products/${params.productId}`,
+          values
+        );
       } else {
         await axios.post(`/api/${params.storeId}/products`, values);
       }
@@ -282,6 +286,38 @@ export const ProductForm = ({
             />
             <FormField
               control={form.control}
+              name="subCategoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subcategory</FormLabel>
+                  <Select
+                    disabled={loading}
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          defaultValue={field.value}
+                          placeholder="Select a subcategory"
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {subCategories.map((subCategory) => (
+                        <SelectItem key={subCategory.id} value={subCategory.id}>
+                          {subCategory.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="colorId"
               render={({ field }) => (
                 <FormItem>
@@ -352,43 +388,6 @@ export const ProductForm = ({
             />
             <FormField
               control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Type</FormLabel>
-                  <Select
-                    disabled={loading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          defaultValue={field.value}
-                          placeholder="Select product type"
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {[
-                        ProductType.MEN,
-                        ProductType.WOMEN,
-                        ProductType.KIDS,
-                        ProductType.BEAUTY,
-                      ].map((type) => (
-                        <SelectItem key={type} value={type} defaultValue={""}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="isFeatured"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
@@ -419,9 +418,13 @@ export const ProductForm = ({
                   <ProductFeatures
                     value={[...field.value]}
                     disabled={loading}
-                    onChange={(value) => field.onChange([...field.value, value])}
+                    onChange={(value) =>
+                      field.onChange([...field.value, value])
+                    }
                     onRemove={(value) =>
-                      field.onChange([...field.value.filter((data) => data !== value)])
+                      field.onChange([
+                        ...field.value.filter((data: any) => data !== value),
+                      ])
                     }
                   />
                 </FormControl>
@@ -439,9 +442,13 @@ export const ProductForm = ({
                   <ProductFeatures
                     value={[...field.value]}
                     disabled={loading}
-                    onChange={(value) => field.onChange([...field.value, value])}
+                    onChange={(value) =>
+                      field.onChange([...field.value, value])
+                    }
                     onRemove={(value) =>
-                      field.onChange([...field.value.filter((data) => data !== value)])
+                      field.onChange([
+                        ...field.value.filter((data: any) => data !== value),
+                      ])
                     }
                   />
                 </FormControl>
@@ -457,11 +464,17 @@ export const ProductForm = ({
                 <FormLabel>Images</FormLabel>
                 <FormControl>
                   <ImageUpload
-                    value={field.value.map((image) => image.url)}
+                    value={field.value.map((image: any) => image.url)}
                     disabled={loading}
-                    onChange={(url) => field.onChange([...field.value, { url }])}
+                    onChange={(url) =>
+                      field.onChange([...field.value, { url }])
+                    }
                     onRemove={(url) =>
-                      field.onChange([...field.value.filter((current) => current.url !== url)])
+                      field.onChange([
+                        ...field.value.filter(
+                          (current: any) => current.url !== url
+                        ),
+                      ])
                     }
                   />
                 </FormControl>

@@ -1,4 +1,4 @@
-// app/api/[storeId]/categories/route.ts
+// app/api/[storeId]/subcategories/route.ts
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { name, billboardId, bannerImage } = await request.json();
+    const { name, billboardId, bannerImage, categoryId } = await request.json();
     const session = await auth();
 
     if (!session || !session.user || !session.user.id) {
@@ -27,6 +27,10 @@ export async function POST(
       return new NextResponse("Banner image is required", { status: 400 });
     }
 
+    if (!categoryId) {
+      return new NextResponse("Category Id is required", { status: 400 });
+    }
+
     if (!params.storeId) {
       return new NextResponse("Store Id is required", { status: 400 });
     }
@@ -41,18 +45,29 @@ export async function POST(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    const category = await db.category.create({
+    const category = await db.category.findUnique({
+      where: {
+        id: categoryId,
+      },
+    });
+
+    if (!category) {
+      return new NextResponse("Category does not exist", { status: 404 });
+    }
+
+    const subCategory = await db.subCategory.create({
       data: {
         name,
         billboardId,
         bannerImage,
+        categoryId,
         storeId: params.storeId,
       },
     });
 
-    return NextResponse.json(category);
+    return NextResponse.json(subCategory);
   } catch (error) {
-    console.log("[CATEGORIES_POST]", error);
+    console.log("[SUBCATEGORIES_POST]", error);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
@@ -66,23 +81,19 @@ export async function GET(
       return new NextResponse("Store Id is required", { status: 400 });
     }
 
-    const categories = await db.category.findMany({
+    const subCategories = await db.subCategory.findMany({
       where: {
         storeId: params.storeId,
       },
       include: {
         billboard: true,
-        subCategories: {
-          include: {
-            billboard: true,
-          },
-        },
+        category: true,
       },
     });
 
-    return NextResponse.json(categories);
+    return NextResponse.json(subCategories);
   } catch (error) {
-    console.log("[CATEGORIES_GET]", error);
+    console.log("[SUBCATEGORIES_GET]", error);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
