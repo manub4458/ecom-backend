@@ -55,74 +55,74 @@ model PasswordResetToken {
 }
 
 model Store {
-  id         String      @id @default(auto()) @map("_id") @db.ObjectId
-  name       String
-  userId     String      @db.ObjectId
-  billboards BillBoard[] @relation("StoreToBillboard")
-  categories Category[]  @relation("StoreToCategory")
-  sizes      Size[]      @relation("StoreToSize")
-  colors     Color[]     @relation("StoreToColor")
-  products   Product[]   @relation("StoreToProduct")
-  orders     Order[]     @relation("StoreToOrder")
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  userId        String        @db.ObjectId
+  billboards    BillBoard[]   @relation("StoreToBillboard")
+  categories    Category[]    @relation("StoreToCategory")
+  subCategories SubCategory[] @relation("StoreToSubCategory")
+  sizes         Size[]        @relation("StoreToSize")
+  colors        Color[]       @relation("StoreToColor")
+  products      Product[]     @relation("StoreToProduct")
+  orders        Order[]       @relation("StoreToOrder")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model BillBoard {
-  id         String     @id @default(auto()) @map("_id") @db.ObjectId
-  storeId    String     @db.ObjectId
-  store      Store      @relation("StoreToBillboard", fields: [storeId], references: [id])
-  label      String
-  imageUrl   String
-  categories Category[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  storeId       String        @db.ObjectId
+  store         Store         @relation("StoreToBillboard", fields: [storeId], references: [id], onDelete: Cascade)
+  label         String
+  imageUrl      String
+  categories    Category[]    @relation("BillboardToCategory")
+  subCategories SubCategory[] @relation("BillboardToSubCategory")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([storeId])
 }
 
-enum CategoryType {
-  MEN
-  WOMEN
-  UNISEX
-  BEAUTY
-  ELECTRONICS
-}
-
-enum CategoryClassification {
-  TOPWEAR
-  BOTTOMWEAR
-  FOOTWEAR
-  INNERWEARANDSLEEPWEAR
-  MAKEUP
-  SKINCARE
-  HAIRCARE
-  FRAGRANCES
-  TELEVISION
-}
-
 model Category {
-  id             String                 @id @default(auto()) @map("_id") @db.ObjectId
-  type           CategoryType           @default(UNISEX)
-  classification CategoryClassification @default(TOPWEAR)
-  storeId        String                 @db.ObjectId
-  store          Store                  @relation("StoreToCategory", fields: [storeId], references: [id])
-  billboardId    String                 @db.ObjectId
-  billboard      BillBoard              @relation(fields: [billboardId], references: [id])
-  products       Product[]              @relation("CategoryToProduct")
-  name           String
-  bannerImage    String                 // 👈 Add this line
-  createdAt      DateTime               @default(now())
-  updatedAt      DateTime               @updatedAt
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  storeId       String        @db.ObjectId
+  store         Store         @relation("StoreToCategory", fields: [storeId], references: [id], onDelete: Cascade)
+  billboardId   String        @db.ObjectId
+  billboard     BillBoard     @relation("BillboardToCategory", fields: [billboardId], references: [id], onDelete: Cascade)
+  products      Product[]     @relation("CategoryToProduct")
+  subCategories SubCategory[] @relation("CategoryToSubCategory")
+  name          String
+  bannerImage   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([storeId, billboardId])
 }
 
+model SubCategory {
+  id                 String        @id @default(auto()) @map("_id") @db.ObjectId
+  storeId            String        @db.ObjectId
+  store              Store         @relation("StoreToSubCategory", fields: [storeId], references: [id], onDelete: Cascade)
+  billboardId        String        @db.ObjectId
+  billboard          BillBoard     @relation("BillboardToSubCategory", fields: [billboardId], references: [id], onDelete: Cascade)
+  categoryId         String        @db.ObjectId
+  category           Category      @relation("CategoryToSubCategory", fields: [categoryId], references: [id], onDelete: Cascade)
+  parentId           String?       @db.ObjectId
+  parent             SubCategory?  @relation("SubCategoryToChildSubCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  childSubCategories SubCategory[] @relation("SubCategoryToChildSubCategory")
+  products           Product[]     @relation("SubCategoryToProduct")
+  name               String
+  bannerImage        String
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([storeId, billboardId, categoryId, parentId])
+}
 
 model Size {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   storeId   String    @db.ObjectId
-  store     Store     @relation("StoreToSize", fields: [storeId], references: [id])
+  store     Store     @relation("StoreToSize", fields: [storeId], references: [id], onDelete: Cascade)
   products  Product[]
   name      String
   value     String
@@ -135,7 +135,7 @@ model Size {
 model Color {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   storeId   String    @db.ObjectId
-  store     Store     @relation("StoreToColor", fields: [storeId], references: [id])
+  store     Store     @relation("StoreToColor", fields: [storeId], references: [id], onDelete: Cascade)
   name      String
   value     String
   createdAt DateTime  @default(now())
@@ -145,20 +145,14 @@ model Color {
   @@index([storeId])
 }
 
-enum ProductType {
-  MEN
-  WOMEN
-  KIDS
-  BEAUTY
-  ELECTRONICS
-}
-
 model Product {
   id              String         @id @default(auto()) @map("_id") @db.ObjectId
   storeId         String         @db.ObjectId
-  store           Store          @relation("StoreToProduct", fields: [storeId], references: [id])
+  store           Store          @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
   categoryId      String         @db.ObjectId
-  category        Category       @relation("CategoryToProduct", fields: [categoryId], references: [id])
+  category        Category       @relation("CategoryToProduct", fields: [categoryId], references: [id], onDelete: Restrict)
+  subCategoryId   String?        @db.ObjectId
+  subCategory     SubCategory?   @relation("SubCategoryToProduct", fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   name            String
   price           Int
   about           String
@@ -167,18 +161,17 @@ model Product {
   materialAndCare String[]
   isFeatured      Boolean        @default(false)
   isArchieved     Boolean        @default(false)
-  type            ProductType
   stock           Int            @default(0)
   sizeId          String?        @db.ObjectId
-  size            Size?          @relation(fields: [sizeId], references: [id])
+  size            Size?          @relation(fields: [sizeId], references: [id], onDelete: SetNull)
   colorId         String?        @db.ObjectId
-  color           Color?         @relation(fields: [colorId], references: [id])
+  color           Color?         @relation(fields: [colorId], references: [id], onDelete: SetNull)
   productImages   ProductImage[]
   orderItems      OrderItem[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  @@index([sizeId, colorId, type, categoryId, storeId])
+  @@index([sizeId, colorId, categoryId, subCategoryId, storeId])
 }
 
 model ProductImage {
@@ -195,7 +188,7 @@ model ProductImage {
 model Order {
   id         String      @id @default(auto()) @map("_id") @db.ObjectId
   storeId    String      @db.ObjectId
-  store      Store       @relation("StoreToOrder", fields: [storeId], references: [id])
+  store      Store       @relation("StoreToOrder", fields: [storeId], references: [id], onDelete: Cascade)
   orderItems OrderItem[]
   isPaid     Boolean     @default(false)
   phone      String      @default("")
@@ -207,12 +200,14 @@ model Order {
 }
 
 model OrderItem {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  orderId   String  @db.ObjectId
-  quantity  Int     @default(1)
-  order     Order   @relation(fields: [orderId], references: [id])
-  productId String  @db.ObjectId
-  product   Product @relation(fields: [productId], references: [id])
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderId   String   @db.ObjectId
+  quantity  Int      @default(1)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([orderId, productId])
 }

@@ -3,14 +3,13 @@
 import * as z from "zod";
 import { useState } from "react";
 import {
-    Category,
-    Color,
-    Product,
-    ProductImage,
-    ProductType,
-    Size
+  Category,
+  Color,
+  Product,
+  ProductImage,
+  Size,
+  SubCategory,
 } from "@prisma/client";
-
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import { toast } from "sonner";
@@ -47,9 +46,22 @@ import { Switch } from "@/components/ui/switch";
 import { ProductFeatures } from "../utils/product-features";
 import Editor from "./editor";
 
+// Helper to get hierarchical subcategory name
+const getSubCategoryName = (
+  subCategory: SubCategory,
+  subCategories: SubCategory[]
+): string => {
+  if (!subCategory.parentId) return subCategory.name;
+  const parent = subCategories.find((sub) => sub.id === subCategory.parentId);
+  return parent
+    ? `${getSubCategoryName(parent, subCategories)} > ${subCategory.name}`
+    : subCategory.name;
+};
+
 interface ProductFormProps {
   data: (Product & { productImages: ProductImage[] }) | null;
   categories: Category[];
+  subCategories: SubCategory[];
   sizes: Size[];
   colors: Color[];
 }
@@ -57,6 +69,7 @@ interface ProductFormProps {
 export const ProductForm = ({
   data,
   categories,
+  subCategories,
   sizes,
   colors,
 }: ProductFormProps) => {
@@ -71,42 +84,60 @@ export const ProductForm = ({
   const actions = data ? "Save Changes" : "Create";
 
   const form = useForm<z.infer<typeof ProductSchema>>({
-  resolver: zodResolver(ProductSchema),
-  defaultValues: data
-    ? {
-        ...data,
-        sizeId: data.sizeId ?? undefined,
-        colorId: data.colorId ?? undefined,
-        categoryId: data.categoryId ?? undefined,
-        productImages: data.productImages || [],
-        type: data.type ?? ProductType.MEN,
-      }
-    : {
-        name: "",
-        productImages: [],
-        price: 0,
-        stock: 0,
-        about: "",
-        description: "",
-        materialAndCare: [],
-        sizeAndFit: [],
-        categoryId: "",
-        sizeId: "",
-        colorId: "",
-        isFeatured: false,
-        isArchieved: false,
-        type: ProductType.MEN,
-      },
-});
+    resolver: zodResolver(ProductSchema),
+    defaultValues: data
+      ? {
+          ...data,
+          sizeId: data.sizeId ?? undefined,
+          colorId: data.colorId ?? undefined,
+          categoryId: data.categoryId ?? undefined,
+          subCategoryId: data.subCategoryId ?? undefined,
+          productImages: data.productImages.map((img) => img.url), // Map to URLs
+          price: data.price || 0,
+          stock: data.stock || 0,
+          about: data.about || "",
+          description: data.description || "",
+          materialAndCare: data.materialAndCare || [],
+          sizeAndFit: data.sizeAndFit || [],
+          isFeatured: data.isFeatured || false,
+          isArchieved: data.isArchieved || false,
+        }
+      : {
+          name: "",
+          productImages: [],
+          price: 0,
+          stock: 0,
+          about: "",
+          description: "",
+          materialAndCare: [],
+          sizeAndFit: [],
+          categoryId: "",
+          subCategoryId: undefined,
+          sizeId: undefined,
+          colorId: undefined,
+          isFeatured: false,
+          isArchieved: false,
+        },
+  });
 
   const onSubmit = async (values: z.infer<typeof ProductSchema>) => {
     try {
       setLoading(true);
 
+      // Map "none" to undefined for subCategoryId
+      const submitValues = {
+        ...values,
+        subCategoryId:
+          values.subCategoryId === "none" ? undefined : values.subCategoryId,
+      };
+
       if (data) {
-        await axios.patch(`/api/${params.storeId}/products/${params.productId}`, values);
+        await axios.patch(
+          `/api/${params.storeId}/products/${params.productId}`,
+          submitValues
+        );
       } else {
-        await axios.post(`/api/${params.storeId}/products`, values);
+        await axios.post(`/api/${params.storeId}/products`, submitValues);
       }
       router.refresh();
       router.push(`/${params.storeId}/products`);
@@ -135,6 +166,8 @@ export const ProductForm = ({
       setLoading(false);
     }
   };
+
+  const selectedCategoryId = form.watch("categoryId");
 
   return (
     <>
@@ -224,6 +257,9 @@ export const ProductForm = ({
                       disabled={loading}
                       placeholder="Enter the price in INR"
                       type="number"
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value))
+                      }
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -242,6 +278,7 @@ export const ProductForm = ({
                       disabled={loading}
                       placeholder="No of stocks available"
                       type="number"
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -274,6 +311,48 @@ export const ProductForm = ({
                           {category.name}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="subCategoryId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subcategory</FormLabel>
+                  <Select
+                    disabled={loading}
+                    onValueChange={field.onChange}
+                    value={field.value || "none"}
+                    defaultValue={field.value || "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          defaultValue={field.value || "none"}
+                          placeholder="Select a subcategory"
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {subCategories
+                        .filter(
+                          (sub) =>
+                            !selectedCategoryId ||
+                            sub.categoryId === selectedCategoryId
+                        )
+                        .map((subCategory) => (
+                          <SelectItem
+                            key={subCategory.id}
+                            value={subCategory.id}
+                          >
+                            {getSubCategoryName(subCategory, subCategories)}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -352,43 +431,6 @@ export const ProductForm = ({
             />
             <FormField
               control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Type</FormLabel>
-                  <Select
-                    disabled={loading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          defaultValue={field.value}
-                          placeholder="Select product type"
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {[
-                        ProductType.MEN,
-                        ProductType.WOMEN,
-                        ProductType.KIDS,
-                        ProductType.BEAUTY,
-                      ].map((type) => (
-                        <SelectItem key={type} value={type} defaultValue={""}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="isFeatured"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
@@ -417,11 +459,15 @@ export const ProductForm = ({
                 <FormLabel>Size and Fit</FormLabel>
                 <FormControl>
                   <ProductFeatures
-                    value={[...field.value]}
+                    value={field.value || []}
                     disabled={loading}
-                    onChange={(value) => field.onChange([...field.value, value])}
+                    onChange={(value) =>
+                      field.onChange([...(field.value || []), value])
+                    }
                     onRemove={(value) =>
-                      field.onChange([...field.value.filter((data) => data !== value)])
+                      field.onChange(
+                        (field.value || []).filter((data) => data !== value)
+                      )
                     }
                   />
                 </FormControl>
@@ -437,11 +483,15 @@ export const ProductForm = ({
                 <FormLabel>Material and Care</FormLabel>
                 <FormControl>
                   <ProductFeatures
-                    value={[...field.value]}
+                    value={field.value || []}
                     disabled={loading}
-                    onChange={(value) => field.onChange([...field.value, value])}
+                    onChange={(value) =>
+                      field.onChange([...(field.value || []), value])
+                    }
                     onRemove={(value) =>
-                      field.onChange([...field.value.filter((data) => data !== value)])
+                      field.onChange(
+                        (field.value || []).filter((data) => data !== value)
+                      )
                     }
                   />
                 </FormControl>
@@ -457,11 +507,13 @@ export const ProductForm = ({
                 <FormLabel>Images</FormLabel>
                 <FormControl>
                   <ImageUpload
-                    value={field.value.map((image) => image.url)}
+                    value={field.value}
                     disabled={loading}
-                    onChange={(url) => field.onChange([...field.value, { url }])}
+                    onChange={(url) => field.onChange([...field.value, url])}
                     onRemove={(url) =>
-                      field.onChange([...field.value.filter((current) => current.url !== url)])
+                      field.onChange(
+                        field.value.filter((current) => current !== url)
+                      )
                     }
                   />
                 </FormControl>

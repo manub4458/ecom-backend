@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { CategoryColumn } from "./columns";
+import { SubCategoryColumn } from "./columns";
 
 import {
   DropdownMenu,
@@ -20,11 +20,13 @@ import { DropdownMenuLabel } from "@radix-ui/react-dropdown-menu";
 import { copyToClipboard } from "@/lib/utils";
 import { AlertModal } from "@/components/modals/alert-modal";
 
-interface CategoryCellActionsProps {
-  data: CategoryColumn;
+interface SubCategoryCellActionsProps {
+  data: SubCategoryColumn;
 }
 
-export const CategoryCellActions = ({ data }: CategoryCellActionsProps) => {
+export const SubCategoryCellActions = ({
+  data,
+}: SubCategoryCellActionsProps) => {
   const router = useRouter();
   const params = useParams();
 
@@ -34,14 +36,12 @@ export const CategoryCellActions = ({ data }: CategoryCellActionsProps) => {
   const onDelete = async () => {
     try {
       setLoading(true);
-      await axios.delete(`/api/${params.storeId}/categories/${data.id}`);
+      await axios.delete(`/api/${params.storeId}/subcategories/${data.id}`);
       router.refresh();
-      toast.success("Category deleted");
+      toast.success("Subcategory deleted");
     } catch (error) {
-      console.error("[CATEGORY_CELL_ACTIONS] Error:", error);
-      toast.error(
-        "Make sure you removed all products and subcategories first."
-      );
+      console.error("[SUBCATEGORY_CELL_ACTIONS] Error:", error);
+      toast.error("Make sure you removed all products first.");
     } finally {
       setOpen(false);
       setLoading(false);
@@ -68,7 +68,7 @@ export const CategoryCellActions = ({ data }: CategoryCellActionsProps) => {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() =>
-              copyToClipboard(data.id, "Category Id is copied to clipboard")
+              copyToClipboard(data.id, "Subcategory Id is copied to clipboard")
             }
           >
             <Copy className="h-4 w-4 mr-4" />
@@ -76,7 +76,7 @@ export const CategoryCellActions = ({ data }: CategoryCellActionsProps) => {
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() =>
-              router.push(`/${params.storeId}/categories/${data.id}`)
+              router.push(`/${params.storeId}/subcategories/${data.id}`)
             }
           >
             <Edit className="h-4 w-4 mr-4" />

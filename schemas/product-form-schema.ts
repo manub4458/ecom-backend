@@ -1,42 +1,20 @@
-import { ProductType } from "@prisma/client";
 import * as z from "zod";
 
 export const ProductSchema = z.object({
-    name : z.string().min(1, {
-        message : "Name is required"
-    }),
-    productImages : z.object({ url: z.string() }).array(),
-    price : z.coerce.number().min(1, {
-        message : "Price is required"
-    }),
-    stock : z.coerce.number().min(0, {
-        message : "Stock cannot be negative"
-    }),
-    categoryId : z.string().min(1, {
-        message : "Category is required"
-    }),
-    colorId : z.string().min(1, {
-        message : "Category is required"
-    }),
-    sizeId : z.string().min(1, {
-        message : "Category is required"
-    }),
-    about : z.string().min(1, {
-        message : "Short description of product is required"
-    }),
-    description : z.string().min(1, {
-        message : "Product description is required"
-    }),
-    sizeAndFit : z.string().array(),
-    materialAndCare :z.string().array(),
-    isFeatured : z.boolean(),
-    isArchieved : z.boolean().default(false),
-    type : z.union([
-        z.literal(ProductType.MEN),
-        z.literal(ProductType.WOMEN),
-        z.literal(ProductType.KIDS),
-        z.literal(ProductType.BEAUTY),
-        z.literal(ProductType.ELECTRONICS),
-
-    ]),
+  name: z.string().min(1, "Name is required"),
+  price: z.number().min(0, "Price must be non-negative"),
+  about: z.string().min(1, "About is required"),
+  description: z.string().min(1, "Description is required"),
+  sizeAndFit: z.array(z.string()).optional(),
+  materialAndCare: z.array(z.string()).optional(),
+  isFeatured: z.boolean().default(false),
+  isArchieved: z.boolean().default(false),
+  stock: z.number().min(0, "Stock must be non-negative").default(0),
+  categoryId: z.string().min(1, "Category is required"),
+  subCategoryId: z.string().optional(), // Supports top-level or child subcategories
+  sizeId: z.string().optional(),
+  colorId: z.string().optional(),
+  productImages: z
+    .array(z.string().url("Invalid URL"))
+    .min(1, "At least one image is required"),
 });

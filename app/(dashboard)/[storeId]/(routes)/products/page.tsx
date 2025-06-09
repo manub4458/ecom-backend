@@ -1,56 +1,69 @@
+import { Metadata } from "next";
 import { format } from "date-fns";
 import { db } from "@/lib/db";
 
-import { ProductClient } from "@/components/store/utils/product-client";
 import { ProductColumn } from "@/components/store/utils/columns";
-import { formatter } from "@/lib/utils";
-import { Metadata } from "next";
+import { ProductClient } from "@/components/store/utils/product-client";
 
-export const metadata: Metadata = {
-    title: "Store | Products"
+// Helper to get hierarchical subcategory name
+const getSubCategoryName = (subCategory: any, subCategories: any[]): string => {
+  if (!subCategory?.parentId) return subCategory?.name || "None";
+  const parent = subCategories.find((sub) => sub.id === subCategory.parentId);
+  return parent
+    ? `${getSubCategoryName(parent, subCategories)} > ${subCategory.name}`
+    : subCategory.name;
 };
 
-const ProductsPage = async (
-    { params }: { params: { storeId: string } }
-) => {
+export const metadata: Metadata = {
+  title: "Store | Products",
+};
 
-    const products = await db.product.findMany({
-        where: {
-            storeId: params.storeId
-        },
-        include: {
-            category: true,
-            color: true,
-            size: true,
-        },
-        orderBy: {
-            createdAt: "desc"
-        }
-    });
-    console.log(`products1 = `, products);
+const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
+  const products = await db.product.findMany({
+    where: {
+      storeId: params.storeId,
+    },
+    include: {
+      category: true,
+      subCategory: true,
+      size: true,
+      color: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
-    const formattedProducts: ProductColumn[] = products.map((item) => ({
-        id: item.id,
-        name: item.name,
-        isFeatured: item.isFeatured,
-        isArchieved: item.isArchieved,
-        price: formatter.format(item.price),
-        stock: item.stock,
-        category: item.category?.name ?? "N/A",
-        size: item.size?.value ?? "N/A",
-        color: item.color?.value ?? "N/A",
-        createdAt: format(item.createdAt, "MMMM do, yyyy")
-    }));
+  const subCategories = await db.subCategory.findMany({
+    where: {
+      storeId: params.storeId,
+    },
+    include: {
+      parent: true,
+    },
+  });
 
-    console.log(`formattedProducts = `, formattedProducts);
+  const formattedProducts: ProductColumn[] = products.map((item) => ({
+    id: item.id,
+    name: item.name,
+    isFeatured: item.isFeatured,
+    isArchieved: item.isArchieved,
+    price: item.price.toString(),
+    stock: item.stock,
+    category: item.category.name,
+    subCategory: getSubCategoryName(item.subCategory, subCategories),
+    size: item.size?.name || "None",
+    color: item.color?.value || "None",
+    createdAt: format(item.createdAt, "MMMM do, yyyy"),
+  }));
 
-    return (
-        <div className="flex flex-col">
-            <div className="flex-1 space-y-4 p-8 pt-6">
-                <ProductClient data={formattedProducts} />
-            </div>
-        </div>
-    );
+  return (
+    <div className="flex flex-col">
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <ProductClient data={formattedProducts} />
+      </div>
+    </div>
+  );
 };
 
 export default ProductsPage;
