@@ -10,7 +10,6 @@ export async function PATCH(
   try {
     const session = await auth();
     const body = await request.json();
-
     const validatedData = ProductSchema.safeParse(body);
 
     if (!validatedData.success) {
@@ -20,23 +19,19 @@ export async function PATCH(
     const {
       name,
       price,
+      about,
+      description,
+      sizeAndFit,
+      materialAndCare,
+      isFeatured,
+      isArchieved,
       stock,
       categoryId,
       subCategoryId,
       sizeId,
       colorId,
-      isFeatured,
-      isArchieved,
       productImages,
-      about,
-      description,
-      materialAndCare,
-      sizeAndFit,
     } = validatedData.data;
-
-    if (!productImages || !productImages.length) {
-      return new NextResponse("Product images are required", { status: 400 });
-    }
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -47,7 +42,7 @@ export async function PATCH(
     }
 
     if (!params.productId) {
-      return new NextResponse("Product Id is required", { status: 400 });
+      return new NextResponse("Product Id is required", { status: 401 });
     }
 
     const storeById = await db.store.findUnique({
@@ -58,41 +53,42 @@ export async function PATCH(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    await db.product.update({
+    // Validate subCategoryId
+    if (subCategoryId) {
+      const subCategory = await db.subCategory.findUnique({
+        where: { id: subCategoryId },
+      });
+      if (!subCategory) {
+        return new NextResponse("Invalid subcategory", { status: 400 });
+      }
+      if (subCategory.categoryId !== categoryId) {
+        return new NextResponse(
+          "Subcategory must belong to the selected category",
+          { status: 400 }
+        );
+      }
+    }
+
+    const product = await db.product.update({
       where: { id: params.productId },
       data: {
         name,
         price,
+        about,
+        description,
+        sizeAndFit,
+        materialAndCare,
+        isFeatured,
+        isArchieved,
         stock,
         categoryId,
         subCategoryId,
         sizeId,
         colorId,
-        isFeatured,
-        isArchieved,
-        about,
-        description,
-        materialAndCare,
-        sizeAndFit,
         productImages: {
           deleteMany: {},
-          createMany: {
-            data: productImages.map((image: { url: string }) => ({
-              url: image.url,
-            })),
-          },
+          create: productImages.map((url) => ({ url })),
         },
-      },
-    });
-
-    const product = await db.product.findUnique({
-      where: { id: params.productId },
-      include: {
-        productImages: true,
-        category: true,
-        subCategory: true,
-        size: true,
-        color: true,
       },
     });
 
@@ -142,7 +138,7 @@ export async function DELETE(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { productId: string } }
 ) {
   try {
@@ -150,18 +146,84 @@ export async function GET(
       return new NextResponse("Product Id is required", { status: 400 });
     }
 
+    // Get search params from URL for potential filtering
+    const { searchParams } = new URL(request.url);
+    const includeRelated = searchParams.get("includeRelated") === "true";
+    const categoryId = searchParams.get("categoryId");
+
+    console.log("Fetching product:", params.productId, "with filters:", {
+      includeRelated,
+      categoryId,
+    });
+
+    // Build the where clause
+    const where: any = {
+      id: params.productId,
+      isArchieved: false, // Only show active products
+    };
+
+    // If categoryId is provided, ensure the product belongs to that category
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
+
     const product = await db.product.findUnique({
-      where: { id: params.productId },
+      where,
       include: {
-        productImages: true,
         category: true,
-        subCategory: true,
+        subCategory: {
+          include: {
+            parent: true,
+            billboard: true,
+          },
+        },
         size: true,
         color: true,
+        productImages: true,
       },
     });
 
-    return NextResponse.json(product);
+    // If product not found or doesn't belong to the specified category
+    if (!product) {
+      return new NextResponse("Product not found", { status: 404 });
+    }
+
+    // If includeRelated is true, fetch related products from the same category
+    let relatedProducts: any[] = [];
+    if (includeRelated && product.categoryId) {
+      relatedProducts = await db.product.findMany({
+        where: {
+          categoryId: product.categoryId,
+          id: {
+            not: product.id, // Exclude the current product
+          },
+          isArchieved: false,
+        },
+        include: {
+          category: true,
+          subCategory: {
+            include: {
+              parent: true,
+              billboard: true,
+            },
+          },
+          size: true,
+          color: true,
+          productImages: true,
+        },
+        take: 4, // Limit to 4 related products
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }
+
+    const response = {
+      ...product,
+      ...(includeRelated && { relatedProducts }),
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.log("[PRODUCT_GET]", error);
     return new NextResponse("Internal server error", { status: 500 });

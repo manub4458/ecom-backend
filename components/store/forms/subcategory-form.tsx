@@ -1,13 +1,11 @@
 "use client";
 
 import * as z from "zod";
+import { useState, useEffect } from "react";
+import { SubCategory, Category, BillBoard } from "@prisma/client";
+import { useForm } from "react-hook-form";
 import axios from "axios";
 import { toast } from "sonner";
-import { useState } from "react";
-import { BillBoard, Category, SubCategory } from "@prisma/client";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useParams, useRouter } from "next/navigation";
 
 import {
   Form,
@@ -17,6 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+
 import {
   Select,
   SelectContent,
@@ -24,62 +23,109 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { Trash2 } from "lucide-react";
 import { Header } from "@/components/store/utils/header";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
+import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
-import { SubCategoryFormSchema } from "@/schemas/subcategory-form-schema";
+import { ImageUpload } from "@/components/store/utils/image-upload";
+import { SubCategorySchema } from "@/schemas/subcategory-form-schema";
 
 interface SubCategoryFormProps {
-  data: SubCategory | null;
-  billboards: BillBoard[];
+  initialData: SubCategory | null;
   categories: Category[];
+  billboards: BillBoard[];
+  subCategories: SubCategory[];
 }
 
 export const SubCategoryForm = ({
-  data,
-  billboards,
+  initialData,
   categories,
+  billboards,
+  subCategories,
 }: SubCategoryFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const params = useParams();
   const router = useRouter();
 
-  const title = data ? "Edit Subcategory" : "Create Subcategory";
-  const description = data ? "Edit a subcategory" : "Add a new subcategory";
-  const toastMessage = data ? "Subcategory updated." : "Subcategory created.";
-  const actions = data ? "Save Changes" : "Create";
+  const title = initialData ? "Edit Subcategory" : "Create Subcategory";
+  const description = initialData
+    ? "Edit a subcategory"
+    : "Add a new subcategory";
+  const toastMessage = initialData
+    ? "Subcategory updated."
+    : "Subcategory created.";
+  const action = initialData ? "Save Changes" : "Create";
 
-  const form = useForm<z.infer<typeof SubCategoryFormSchema>>({
-    resolver: zodResolver(SubCategoryFormSchema),
-    defaultValues: data || {
-      name: "",
-      bannerImage: "",
-      billboardId: "",
-      categoryId: "",
-    },
+  const form = useForm<z.infer<typeof SubCategorySchema>>({
+    resolver: zodResolver(SubCategorySchema),
+    defaultValues: initialData
+      ? {
+          name: initialData.name,
+          billboardId: initialData.billboardId,
+          bannerImage: initialData.bannerImage,
+          categoryId: initialData.categoryId,
+          parentId: initialData.parentId || undefined,
+        }
+      : {
+          name: "",
+          billboardId: "",
+          bannerImage: "",
+          categoryId: "",
+          parentId: undefined,
+        },
   });
 
-  const onSubmit = async (values: z.infer<typeof SubCategoryFormSchema>) => {
+  const { watch, setValue } = form;
+  const parentId = watch("parentId");
+
+  // Prefill categoryId based on parentId
+  useEffect(() => {
+    if (parentId && parentId !== "none") {
+      const parentSubCategory = subCategories.find(
+        (sub) => sub.id === parentId
+      );
+      if (parentSubCategory) {
+        setValue("categoryId", parentSubCategory.categoryId);
+      }
+    }
+  }, [parentId, subCategories, setValue]);
+
+  const onSubmit = async (values: z.infer<typeof SubCategorySchema>) => {
     try {
       setLoading(true);
-      if (data) {
+
+      // Validate parentId to prevent cycles
+      if (values.parentId && initialData?.id === values.parentId) {
+        toast.error("A subcategory cannot be its own parent.");
+        return;
+      }
+
+      // Map "none" to null for parentId
+      const submitValues = {
+        ...values,
+        parentId: values.parentId === "none" ? null : values.parentId,
+      };
+
+      if (initialData) {
         await axios.patch(
           `/api/${params.storeId}/subcategories/${params.subCategoryId}`,
-          values
+          submitValues
         );
       } else {
-        await axios.post(`/api/${params.storeId}/subcategories`, values);
+        await axios.post(`/api/${params.storeId}/subcategories`, submitValues);
       }
       router.refresh();
       router.push(`/${params.storeId}/subcategories`);
       toast.success(toastMessage);
     } catch (error) {
-      console.error("[SUBCATEGORY_FORM] Error:", error);
-      toast.error("Internal server error");
+      console.log("[SUBCATEGORY_FORM]", error);
+      toast.error("Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -93,12 +139,15 @@ export const SubCategoryForm = ({
       );
       router.refresh();
       router.push(`/${params.storeId}/subcategories`);
-      toast.success("Subcategory deleted");
+      toast.success("Subcategory deleted.");
     } catch (error) {
-      console.error("[SUBCATEGORY_FORM] Error:", error);
-      toast.error("Make sure you removed all products first.");
+      console.log("[SUBCATEGORY_DELETE]", error);
+      toast.error(
+        "Make sure to remove all products using this subcategory first."
+      );
     } finally {
       setLoading(false);
+      setOpen(false);
     }
   };
 
@@ -112,7 +161,7 @@ export const SubCategoryForm = ({
       />
       <div className="flex items-center justify-between">
         <Header title={title} description={description} />
-        {data && (
+        {initialData && (
           <Button
             disabled={loading}
             variant="destructive"
@@ -138,23 +187,6 @@ export const SubCategoryForm = ({
                       {...field}
                       disabled={loading}
                       placeholder="Subcategory name"
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="bannerImage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Banner Image</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="Banner URL"
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -200,7 +232,8 @@ export const SubCategoryForm = ({
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <Select
-                    disabled={loading}
+                    //@ts-ignore
+                    disabled={loading || (parentId && parentId !== "none")} // Disable if parentId is selected
                     onValueChange={field.onChange}
                     value={field.value}
                     defaultValue={field.value}
@@ -225,9 +258,65 @@ export const SubCategoryForm = ({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="parentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Parent Subcategory</FormLabel>
+                  <Select
+                    disabled={loading}
+                    onValueChange={field.onChange}
+                    value={field.value || "none"}
+                    defaultValue={field.value || "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          defaultValue={field.value || "none"}
+                          placeholder="Select a parent subcategory (optional)"
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {subCategories
+                        .filter((sub) => sub.id !== initialData?.id) // Exclude self
+                        .map((subCategory) => (
+                          <SelectItem
+                            key={subCategory.id}
+                            value={subCategory.id}
+                          >
+                            {subCategory.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bannerImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Banner Image</FormLabel>
+                  <FormControl>
+                    <ImageUpload
+                      value={field.value ? [field.value] : []}
+                      disabled={loading}
+                      onChange={(url) => field.onChange(url)}
+                      onRemove={() => field.onChange("")}
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
           </div>
           <Button type="submit" disabled={loading}>
-            {actions}
+            {action}
           </Button>
         </form>
       </Form>

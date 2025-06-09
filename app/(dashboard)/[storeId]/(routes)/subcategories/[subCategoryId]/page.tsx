@@ -1,5 +1,11 @@
-import { SubCategoryForm } from "@/components/store/forms/subcategory-form";
+import { Metadata } from "next";
 import { db } from "@/lib/db";
+
+import { SubCategoryForm } from "@/components/store/forms/subcategory-form";
+
+export const metadata: Metadata = {
+  title: "Store | Subcategory",
+};
 
 const SubCategoryPage = async ({
   params,
@@ -9,20 +15,18 @@ const SubCategoryPage = async ({
   let subCategory = null;
 
   if (params.subCategoryId !== "create") {
-    try {
-      subCategory = await db.subCategory.findUnique({
-        where: {
-          id: params.subCategoryId,
-        },
-        include: {
-          billboard: true,
-          category: true,
-        },
-      });
-    } catch (error) {
-      console.error("[SUBCATEGORY_PAGE] Error fetching subcategory:", error);
-    }
+    subCategory = await db.subCategory.findUnique({
+      where: {
+        id: params.subCategoryId,
+      },
+    });
   }
+
+  const categories = await db.category.findMany({
+    where: {
+      storeId: params.storeId,
+    },
+  });
 
   const billboards = await db.billBoard.findMany({
     where: {
@@ -30,7 +34,7 @@ const SubCategoryPage = async ({
     },
   });
 
-  const categories = await db.category.findMany({
+  const subCategories = await db.subCategory.findMany({
     where: {
       storeId: params.storeId,
     },
@@ -40,9 +44,10 @@ const SubCategoryPage = async ({
     <div className="flex flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
         <SubCategoryForm
-          data={subCategory}
-          billboards={billboards}
+          initialData={subCategory}
           categories={categories}
+          billboards={billboards}
+          subCategories={subCategories}
         />
       </div>
     </div>

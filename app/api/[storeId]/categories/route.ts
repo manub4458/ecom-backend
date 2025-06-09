@@ -1,4 +1,3 @@
-// app/api/[storeId]/categories/route.ts
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
@@ -75,12 +74,40 @@ export async function GET(
         subCategories: {
           include: {
             billboard: true,
+            childSubCategories: {
+              include: {
+                billboard: true,
+                childSubCategories: {
+                  include: {
+                    billboard: true,
+                    childSubCategories: true, // Limit recursion to 3 levels
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
 
-    return NextResponse.json(categories);
+    // Transform subCategories to include only top-level subcategories
+    const transformedCategories = categories.map((category) => ({
+      ...category,
+      subCategories: category.subCategories
+        .filter((sub) => sub.parentId === null)
+        .map((sub) => ({
+          ...sub,
+          childSubCategories: sub.childSubCategories.map((child) => ({
+            ...child,
+            childSubCategories: child.childSubCategories.map((grandchild) => ({
+              ...grandchild,
+              childSubCategories: grandchild.childSubCategories || [],
+            })),
+          })),
+        })),
+    }));
+
+    return NextResponse.json(transformedCategories);
   } catch (error) {
     console.log("[CATEGORIES_GET]", error);
     return new NextResponse("Internal server error", { status: 500 });

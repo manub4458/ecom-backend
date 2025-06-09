@@ -1,10 +1,18 @@
+import { Metadata } from "next";
 import { format } from "date-fns";
 import { db } from "@/lib/db";
 
-import { ProductClient } from "@/components/store/utils/product-client";
 import { ProductColumn } from "@/components/store/utils/columns";
-import { formatter } from "@/lib/utils";
-import { Metadata } from "next";
+import { ProductClient } from "@/components/store/utils/product-client";
+
+// Helper to get hierarchical subcategory name
+const getSubCategoryName = (subCategory: any, subCategories: any[]): string => {
+  if (!subCategory?.parentId) return subCategory?.name || "None";
+  const parent = subCategories.find((sub) => sub.id === subCategory.parentId);
+  return parent
+    ? `${getSubCategoryName(parent, subCategories)} > ${subCategory.name}`
+    : subCategory.name;
+};
 
 export const metadata: Metadata = {
   title: "Store | Products",
@@ -18,25 +26,34 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     include: {
       category: true,
       subCategory: true,
-      color: true,
       size: true,
+      color: true,
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  const formattedProducts: ProductColumn[] = products.map((item: any) => ({
+  const subCategories = await db.subCategory.findMany({
+    where: {
+      storeId: params.storeId,
+    },
+    include: {
+      parent: true,
+    },
+  });
+
+  const formattedProducts: ProductColumn[] = products.map((item) => ({
     id: item.id,
     name: item.name,
     isFeatured: item.isFeatured,
     isArchieved: item.isArchieved,
-    price: formatter.format(item.price),
+    price: item.price.toString(),
     stock: item.stock,
-    category: item.category?.name ?? "N/A",
-    subCategory: item.subCategory?.name ?? "N/A",
-    size: item.size?.value ?? "N/A",
-    color: item.color?.value ?? "N/A",
+    category: item.category.name,
+    subCategory: getSubCategoryName(item.subCategory, subCategories),
+    size: item.size?.name || "None",
+    color: item.color?.value || "None",
     createdAt: format(item.createdAt, "MMMM do, yyyy"),
   }));
 

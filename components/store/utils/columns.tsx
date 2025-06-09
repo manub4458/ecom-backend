@@ -34,6 +34,7 @@ export type CategoryColumn = {
   name: string;
   billboardLabel: string;
   createdAt: string;
+  subCategories?: { id: string; name: string; billboardLabel: string }[];
 };
 
 export const categoryColumns: ColumnDef<CategoryColumn>[] = [
@@ -60,6 +61,7 @@ export type SubCategoryColumn = {
   name: string;
   billboardLabel: string;
   categoryName: string;
+  parentName?: string; // Added for parent subcategory
   createdAt: string;
 };
 
@@ -75,6 +77,10 @@ export const subCategoryColumns: ColumnDef<SubCategoryColumn>[] = [
   {
     accessorKey: "categoryName",
     header: "Category",
+  },
+  {
+    accessorKey: "parentName",
+    header: "Parent Subcategory",
   },
   {
     accessorKey: "createdAt",
@@ -155,7 +161,7 @@ export type ProductColumn = {
   price: string;
   stock: number;
   category: string;
-  subCategory: string;
+  subCategory?: string;
   size: string;
   color: string;
   createdAt: string;
@@ -188,7 +194,7 @@ export const productColumns: ColumnDef<ProductColumn>[] = [
   },
   {
     accessorKey: "isArchieved",
-    header: "Archieved",
+    header: "Archived",
   },
   {
     accessorKey: "isFeatured",

@@ -21,18 +21,20 @@ const SubCategoriesPage = async ({
     include: {
       billboard: true,
       category: true,
+      parent: true,
     },
     orderBy: {
       createdAt: "desc",
     },
   });
 
-  const formattedSubCategory: SubCategoryColumn[] = subCategories.map(
-    (item: any) => ({
+  const formattedSubCategories: SubCategoryColumn[] = subCategories.map(
+    (item) => ({
       id: item.id,
       name: item.name,
       billboardLabel: item.billboard.label,
       categoryName: item.category.name,
+      parentName: item.parent?.name || "None",
       createdAt: format(item.createdAt, "MMMM do, yyyy"),
     })
   );
@@ -40,7 +42,7 @@ const SubCategoriesPage = async ({
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
-        <SubCategoryClient data={formattedSubCategory} />
+        <SubCategoryClient data={formattedSubCategories} />
       </div>
     </div>
   );

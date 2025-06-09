@@ -46,6 +46,18 @@ import { Switch } from "@/components/ui/switch";
 import { ProductFeatures } from "../utils/product-features";
 import Editor from "./editor";
 
+// Helper to get hierarchical subcategory name
+const getSubCategoryName = (
+  subCategory: SubCategory,
+  subCategories: SubCategory[]
+): string => {
+  if (!subCategory.parentId) return subCategory.name;
+  const parent = subCategories.find((sub) => sub.id === subCategory.parentId);
+  return parent
+    ? `${getSubCategoryName(parent, subCategories)} > ${subCategory.name}`
+    : subCategory.name;
+};
+
 interface ProductFormProps {
   data: (Product & { productImages: ProductImage[] }) | null;
   categories: Category[];
@@ -80,7 +92,15 @@ export const ProductForm = ({
           colorId: data.colorId ?? undefined,
           categoryId: data.categoryId ?? undefined,
           subCategoryId: data.subCategoryId ?? undefined,
-          productImages: data.productImages || [],
+          productImages: data.productImages.map((img) => img.url), // Map to URLs
+          price: data.price || 0,
+          stock: data.stock || 0,
+          about: data.about || "",
+          description: data.description || "",
+          materialAndCare: data.materialAndCare || [],
+          sizeAndFit: data.sizeAndFit || [],
+          isFeatured: data.isFeatured || false,
+          isArchieved: data.isArchieved || false,
         }
       : {
           name: "",
@@ -92,9 +112,9 @@ export const ProductForm = ({
           materialAndCare: [],
           sizeAndFit: [],
           categoryId: "",
-          subCategoryId: "",
-          sizeId: "",
-          colorId: "",
+          subCategoryId: undefined,
+          sizeId: undefined,
+          colorId: undefined,
           isFeatured: false,
           isArchieved: false,
         },
@@ -104,13 +124,20 @@ export const ProductForm = ({
     try {
       setLoading(true);
 
+      // Map "none" to undefined for subCategoryId
+      const submitValues = {
+        ...values,
+        subCategoryId:
+          values.subCategoryId === "none" ? undefined : values.subCategoryId,
+      };
+
       if (data) {
         await axios.patch(
           `/api/${params.storeId}/products/${params.productId}`,
-          values
+          submitValues
         );
       } else {
-        await axios.post(`/api/${params.storeId}/products`, values);
+        await axios.post(`/api/${params.storeId}/products`, submitValues);
       }
       router.refresh();
       router.push(`/${params.storeId}/products`);
@@ -139,6 +166,8 @@ export const ProductForm = ({
       setLoading(false);
     }
   };
+
+  const selectedCategoryId = form.watch("categoryId");
 
   return (
     <>
@@ -228,6 +257,9 @@ export const ProductForm = ({
                       disabled={loading}
                       placeholder="Enter the price in INR"
                       type="number"
+                      onChange={(e) =>
+                        field.onChange(parseFloat(e.target.value))
+                      }
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -246,6 +278,7 @@ export const ProductForm = ({
                       disabled={loading}
                       placeholder="No of stocks available"
                       type="number"
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -293,23 +326,33 @@ export const ProductForm = ({
                   <Select
                     disabled={loading}
                     onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
+                    value={field.value || "none"}
+                    defaultValue={field.value || "none"}
                   >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue
-                          defaultValue={field.value}
+                          defaultValue={field.value || "none"}
                           placeholder="Select a subcategory"
                         />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {subCategories.map((subCategory) => (
-                        <SelectItem key={subCategory.id} value={subCategory.id}>
-                          {subCategory.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="none">None</SelectItem>
+                      {subCategories
+                        .filter(
+                          (sub) =>
+                            !selectedCategoryId ||
+                            sub.categoryId === selectedCategoryId
+                        )
+                        .map((subCategory) => (
+                          <SelectItem
+                            key={subCategory.id}
+                            value={subCategory.id}
+                          >
+                            {getSubCategoryName(subCategory, subCategories)}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
@@ -416,15 +459,15 @@ export const ProductForm = ({
                 <FormLabel>Size and Fit</FormLabel>
                 <FormControl>
                   <ProductFeatures
-                    value={[...field.value]}
+                    value={field.value || []}
                     disabled={loading}
                     onChange={(value) =>
-                      field.onChange([...field.value, value])
+                      field.onChange([...(field.value || []), value])
                     }
                     onRemove={(value) =>
-                      field.onChange([
-                        ...field.value.filter((data: any) => data !== value),
-                      ])
+                      field.onChange(
+                        (field.value || []).filter((data) => data !== value)
+                      )
                     }
                   />
                 </FormControl>
@@ -440,15 +483,15 @@ export const ProductForm = ({
                 <FormLabel>Material and Care</FormLabel>
                 <FormControl>
                   <ProductFeatures
-                    value={[...field.value]}
+                    value={field.value || []}
                     disabled={loading}
                     onChange={(value) =>
-                      field.onChange([...field.value, value])
+                      field.onChange([...(field.value || []), value])
                     }
                     onRemove={(value) =>
-                      field.onChange([
-                        ...field.value.filter((data: any) => data !== value),
-                      ])
+                      field.onChange(
+                        (field.value || []).filter((data) => data !== value)
+                      )
                     }
                   />
                 </FormControl>
@@ -464,17 +507,13 @@ export const ProductForm = ({
                 <FormLabel>Images</FormLabel>
                 <FormControl>
                   <ImageUpload
-                    value={field.value.map((image: any) => image.url)}
+                    value={field.value}
                     disabled={loading}
-                    onChange={(url) =>
-                      field.onChange([...field.value, { url }])
-                    }
+                    onChange={(url) => field.onChange([...field.value, url])}
                     onRemove={(url) =>
-                      field.onChange([
-                        ...field.value.filter(
-                          (current: any) => current.url !== url
-                        ),
-                      ])
+                      field.onChange(
+                        field.value.filter((current) => current !== url)
+                      )
                     }
                   />
                 </FormControl>
