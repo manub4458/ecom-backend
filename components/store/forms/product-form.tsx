@@ -99,6 +99,7 @@ export const ProductForm = ({
           description: data.description || "",
           materialAndCare: data.materialAndCare || [],
           sizeAndFit: data.sizeAndFit || [],
+          enabledFeatures: data.enabledFeatures || [], // Added
           isFeatured: data.isFeatured || false,
           isArchieved: data.isArchieved || false,
         }
@@ -111,6 +112,7 @@ export const ProductForm = ({
           description: "",
           materialAndCare: [],
           sizeAndFit: [],
+          enabledFeatures: [], // Added
           categoryId: "",
           subCategoryId: undefined,
           sizeId: undefined,
@@ -481,6 +483,30 @@ export const ProductForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Material and Care</FormLabel>
+                <FormControl>
+                  <ProductFeatures
+                    value={field.value || []}
+                    disabled={loading}
+                    onChange={(value) =>
+                      field.onChange([...(field.value || []), value])
+                    }
+                    onRemove={(value) =>
+                      field.onChange(
+                        (field.value || []).filter((data) => data !== value)
+                      )
+                    }
+                  />
+                </FormControl>
+                <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="enabledFeatures"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Enabled Features</FormLabel>
                 <FormControl>
                   <ProductFeatures
                     value={field.value || []}

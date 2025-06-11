@@ -159,6 +159,7 @@ model Product {
   description     String
   sizeAndFit      String[]
   materialAndCare String[]
+  enabledFeatures String[]       @default([]) // New field for enabled features
   isFeatured      Boolean        @default(false)
   isArchieved     Boolean        @default(false)
   stock           Int            @default(0)
