@@ -7,6 +7,7 @@ export const ProductSchema = z.object({
   description: z.string().min(1, "Description is required"),
   sizeAndFit: z.array(z.string()).optional(),
   materialAndCare: z.array(z.string()).optional(),
+  enabledFeatures: z.array(z.string()).optional(), // Added
   isFeatured: z.boolean().default(false),
   isArchieved: z.boolean().default(false),
   stock: z.number().min(0, "Stock must be non-negative").default(0),

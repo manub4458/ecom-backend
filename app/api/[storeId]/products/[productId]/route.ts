@@ -23,6 +23,7 @@ export async function PATCH(
       description,
       sizeAndFit,
       materialAndCare,
+      enabledFeatures, // Added
       isFeatured,
       isArchieved,
       stock,
@@ -78,6 +79,7 @@ export async function PATCH(
         description,
         sizeAndFit,
         materialAndCare,
+        enabledFeatures, // Added
         isFeatured,
         isArchieved,
         stock,
