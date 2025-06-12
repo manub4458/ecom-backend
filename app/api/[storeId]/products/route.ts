@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { NextResponse } from "next/server";
+import { generateUniqueSlug } from "@/lib/slugify";
 
 export async function POST(
   request: Request,
@@ -66,9 +67,13 @@ export async function POST(
       }
     }
 
+    // Generate unique slug
+    const slug = await generateUniqueSlug(name, "Product");
+
     const product = await db.product.create({
       data: {
         name,
+        slug,
         price,
         about,
         description,
@@ -107,6 +112,7 @@ export async function GET(
 
     // Get search params from URL
     const { searchParams } = new URL(request.url);
+    const slug = searchParams.get("slug");
     const categoryId = searchParams.get("categoryId");
     const colorId = searchParams.get("colorId");
     const sizeId = searchParams.get("sizeId");
@@ -116,6 +122,7 @@ export async function GET(
     const price = searchParams.get("price");
 
     console.log("Received filters:", {
+      slug,
       categoryId,
       colorId,
       sizeId,
@@ -125,13 +132,41 @@ export async function GET(
       price,
     });
 
-    // Build the where clause
+    // If slug is provided, fetch a single product by slug
+    if (slug) {
+      const product = await db.product.findUnique({
+        where: {
+          slug,
+          storeId: params.storeId,
+          isArchieved: false,
+        },
+        include: {
+          category: true,
+          subCategory: {
+            include: {
+              parent: true,
+              billboard: true,
+            },
+          },
+          size: true,
+          color: true,
+          productImages: true,
+        },
+      });
+
+      if (!product) {
+        return new NextResponse("Product not found", { status: 404 });
+      }
+
+      return NextResponse.json(product);
+    }
+
+    // Otherwise, proceed with existing logic to fetch multiple products
     const where: any = {
       storeId: params.storeId,
       isArchieved: false, // Only show active products
     };
 
-    // CRITICAL: Add categoryId filter
     if (categoryId) {
       where.categoryId = categoryId;
     }

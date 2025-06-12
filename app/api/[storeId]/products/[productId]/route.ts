@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { NextResponse } from "next/server";
+import { generateUniqueSlug } from "@/lib/slugify";
 
 export async function PATCH(
   request: Request,
@@ -23,7 +24,7 @@ export async function PATCH(
       description,
       sizeAndFit,
       materialAndCare,
-      enabledFeatures, // Added
+      enabledFeatures,
       isFeatured,
       isArchieved,
       stock,
@@ -70,16 +71,20 @@ export async function PATCH(
       }
     }
 
+    // Generate unique slug
+    const slug = await generateUniqueSlug(name, "Product", params.productId);
+
     const product = await db.product.update({
       where: { id: params.productId },
       data: {
         name,
+        slug,
         price,
         about,
         description,
         sizeAndFit,
         materialAndCare,
-        enabledFeatures, // Added
+        enabledFeatures,
         isFeatured,
         isArchieved,
         stock,

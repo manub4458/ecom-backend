@@ -2,8 +2,8 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { SubCategorySchema } from "@/schemas/subcategory-form-schema";
 import { NextResponse } from "next/server";
+import { generateUniqueSlug } from "@/lib/slugify";
 
-// Helper to prevent cycles
 async function isValidParent(
   subCategoryId: string | null,
   parentId: string
@@ -85,10 +85,18 @@ export async function PATCH(
       }
     }
 
+    // Generate unique slug
+    const slug = await generateUniqueSlug(
+      name,
+      "SubCategory",
+      params.subCategoryId
+    );
+
     const subCategory = await db.subCategory.update({
       where: { id: params.subCategoryId },
       data: {
         name,
+        slug,
         billboardId,
         bannerImage,
         categoryId,

@@ -1,7 +1,7 @@
-// app/api/[storeId]/categories/[categoryId]/route.ts
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { generateUniqueSlug } from "@/lib/slugify";
 
 export async function PATCH(
   request: Request,
@@ -45,12 +45,16 @@ export async function PATCH(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
+    // Generate unique slug
+    const slug = await generateUniqueSlug(name, "Category", params.categoryId);
+
     const category = await db.category.update({
       where: {
         id: params.categoryId,
       },
       data: {
         name,
+        slug,
         billboardId,
         bannerImage,
       },

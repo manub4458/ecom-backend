@@ -92,6 +92,7 @@ model Category {
   products      Product[]     @relation("CategoryToProduct")
   subCategories SubCategory[] @relation("CategoryToSubCategory")
   name          String
+  slug          String        @unique
   bannerImage   String
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -111,6 +112,7 @@ model SubCategory {
   parent             SubCategory?  @relation("SubCategoryToChildSubCategory", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   childSubCategories SubCategory[] @relation("SubCategoryToChildSubCategory")
   products           Product[]     @relation("SubCategoryToProduct")
+  slug               String        @unique
   name               String
   bannerImage        String
   createdAt          DateTime      @default(now())
@@ -154,12 +156,13 @@ model Product {
   subCategoryId   String?        @db.ObjectId
   subCategory     SubCategory?   @relation("SubCategoryToProduct", fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   name            String
+  slug            String         @unique
   price           Int
   about           String
   description     String
   sizeAndFit      String[]
   materialAndCare String[]
-  enabledFeatures String[]       @default([]) // New field for enabled features
+  enabledFeatures String[]       @default([])
   isFeatured      Boolean        @default(false)
   isArchieved     Boolean        @default(false)
   stock           Int            @default(0)

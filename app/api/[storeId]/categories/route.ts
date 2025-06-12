@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { generateUniqueSlug } from "@/lib/slugify";
 
 export async function POST(
   request: Request,
@@ -40,9 +41,13 @@ export async function POST(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
+    // Generate unique slug
+    const slug = await generateUniqueSlug(name, "Category");
+
     const category = await db.category.create({
       data: {
         name,
+        slug,
         billboardId,
         bannerImage,
         storeId: params.storeId,
@@ -65,6 +70,46 @@ export async function GET(
       return new NextResponse("Store Id is required", { status: 400 });
     }
 
+    // Get search params from URL
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get("slug");
+
+    // If slug is provided, fetch a single category by slug
+    if (slug) {
+      const category = await db.category.findUnique({
+        where: {
+          slug,
+          storeId: params.storeId,
+        },
+        include: {
+          billboard: true,
+          subCategories: {
+            include: {
+              billboard: true,
+              childSubCategories: {
+                include: {
+                  billboard: true,
+                  childSubCategories: {
+                    include: {
+                      billboard: true,
+                      childSubCategories: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!category) {
+        return new NextResponse("Category not found", { status: 404 });
+      }
+
+      return NextResponse.json(category);
+    }
+
+    // Otherwise, fetch all categories for the store
     const categories = await db.category.findMany({
       where: {
         storeId: params.storeId,
@@ -80,7 +125,7 @@ export async function GET(
                 childSubCategories: {
                   include: {
                     billboard: true,
-                    childSubCategories: true, // Limit recursion to 3 levels
+                    childSubCategories: true,
                   },
                 },
               },
