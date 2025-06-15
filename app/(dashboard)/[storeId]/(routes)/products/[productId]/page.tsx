@@ -1,5 +1,5 @@
-import { ProductForm } from "@/components/store/forms/product-form";
 import { db } from "@/lib/db";
+import { ProductForm } from "@/components/store/forms/product-form";
 
 const ProductPage = async ({
   params,
@@ -19,6 +19,15 @@ const ProductPage = async ({
         size: true,
         category: true,
         subCategory: true,
+        productSpecifications: {
+          include: {
+            specificationField: {
+              include: {
+                group: true,
+              },
+            },
+          },
+        },
       },
     });
   }
@@ -47,6 +56,15 @@ const ProductPage = async ({
     },
   });
 
+  const specificationFields = await db.specificationField.findMany({
+    where: {
+      storeId: params.storeId,
+    },
+    include: {
+      group: true,
+    },
+  });
+
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
@@ -56,6 +74,7 @@ const ProductPage = async ({
           subCategories={subCategories}
           sizes={sizes}
           colors={colors}
+          specificationFields={specificationFields}
         />
       </div>
     </div>

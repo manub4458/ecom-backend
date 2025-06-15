@@ -33,6 +33,7 @@ export async function PATCH(
       sizeId,
       colorId,
       productImages,
+      specifications,
     } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -71,6 +72,26 @@ export async function PATCH(
       }
     }
 
+    // Validate specificationFieldIds
+    if (specifications && specifications.length > 0) {
+      const specificationFieldIds = specifications.map(
+        (spec) => spec.specificationFieldId
+      );
+      const specificationFields = await db.specificationField.findMany({
+        where: {
+          id: { in: specificationFieldIds },
+          storeId: params.storeId,
+        },
+      });
+
+      if (specificationFields.length !== specificationFieldIds.length) {
+        return new NextResponse(
+          "One or more specification fields are invalid",
+          { status: 400 }
+        );
+      }
+    }
+
     // Generate unique slug
     const slug = await generateUniqueSlug(name, "Product", params.productId);
 
@@ -96,6 +117,16 @@ export async function PATCH(
           deleteMany: {},
           create: productImages.map((url) => ({ url })),
         },
+        productSpecifications: {
+          deleteMany: {}, // Remove existing specifications
+          create: specifications?.map((spec) => ({
+            specificationFieldId: spec.specificationFieldId,
+            value: spec.value,
+          })),
+        },
+      },
+      include: {
+        productSpecifications: true,
       },
     });
 
@@ -169,7 +200,6 @@ export async function GET(
       isArchieved: false, // Only show active products
     };
 
-    // If categoryId is provided, ensure the product belongs to that category
     if (categoryId) {
       where.categoryId = categoryId;
     }
@@ -187,22 +217,29 @@ export async function GET(
         size: true,
         color: true,
         productImages: true,
+        productSpecifications: {
+          include: {
+            specificationField: {
+              include: {
+                group: true, // Include the group for each specification field
+              },
+            },
+          },
+        },
       },
     });
 
-    // If product not found or doesn't belong to the specified category
     if (!product) {
       return new NextResponse("Product not found", { status: 404 });
     }
 
-    // If includeRelated is true, fetch related products from the same category
     let relatedProducts: any[] = [];
     if (includeRelated && product.categoryId) {
       relatedProducts = await db.product.findMany({
         where: {
           categoryId: product.categoryId,
           id: {
-            not: product.id, // Exclude the current product
+            not: product.id,
           },
           isArchieved: false,
         },
@@ -217,8 +254,17 @@ export async function GET(
           size: true,
           color: true,
           productImages: true,
+          productSpecifications: {
+            include: {
+              specificationField: {
+                include: {
+                  group: true,
+                },
+              },
+            },
+          },
         },
-        take: 4, // Limit to 4 related products
+        take: 4,
         orderBy: {
           createdAt: "desc",
         },

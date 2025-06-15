@@ -18,4 +18,14 @@ export const ProductSchema = z.object({
   productImages: z
     .array(z.string().url("Invalid URL"))
     .min(1, "At least one image is required"),
+  specifications: z
+    .array(
+      z.object({
+        specificationFieldId: z
+          .string()
+          .min(1, "Specification field is required"),
+        value: z.string().min(1, "Value is required"),
+      })
+    )
+    .optional(),
 });

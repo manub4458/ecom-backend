@@ -33,6 +33,7 @@ export async function POST(
       sizeId,
       colorId,
       productImages,
+      specifications,
     } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -67,6 +68,26 @@ export async function POST(
       }
     }
 
+    // Validate specificationFieldIds
+    if (specifications && specifications.length > 0) {
+      const specificationFieldIds = specifications.map(
+        (spec) => spec.specificationFieldId
+      );
+      const specificationFields = await db.specificationField.findMany({
+        where: {
+          id: { in: specificationFieldIds },
+          storeId: params.storeId,
+        },
+      });
+
+      if (specificationFields.length !== specificationFieldIds.length) {
+        return new NextResponse(
+          "One or more specification fields are invalid",
+          { status: 400 }
+        );
+      }
+    }
+
     // Generate unique slug
     const slug = await generateUniqueSlug(name, "Product");
 
@@ -91,6 +112,15 @@ export async function POST(
         productImages: {
           create: productImages.map((url) => ({ url })),
         },
+        productSpecifications: {
+          create: specifications?.map((spec) => ({
+            specificationFieldId: spec.specificationFieldId,
+            value: spec.value,
+          })),
+        },
+      },
+      include: {
+        productSpecifications: true,
       },
     });
 
@@ -110,7 +140,6 @@ export async function GET(
       return new NextResponse("Store Id is required", { status: 400 });
     }
 
-    // Get search params from URL
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");
     const categoryId = searchParams.get("categoryId");
@@ -132,7 +161,6 @@ export async function GET(
       price,
     });
 
-    // If slug is provided, fetch a single product by slug
     if (slug) {
       const product = await db.product.findUnique({
         where: {
@@ -151,6 +179,15 @@ export async function GET(
           size: true,
           color: true,
           productImages: true,
+          productSpecifications: {
+            include: {
+              specificationField: {
+                include: {
+                  group: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -161,10 +198,9 @@ export async function GET(
       return NextResponse.json(product);
     }
 
-    // Otherwise, proceed with existing logic to fetch multiple products
     const where: any = {
       storeId: params.storeId,
-      isArchieved: false, // Only show active products
+      isArchieved: false,
     };
 
     if (categoryId) {
@@ -183,10 +219,8 @@ export async function GET(
       where.type = type;
     }
 
-    // Handle price filtering
     if (price) {
       if (price === "5000") {
-        // Above Rs. 5000
         where.price = {
           gte: 5000,
         };
@@ -201,9 +235,6 @@ export async function GET(
       }
     }
 
-    console.log("Where clause:", where);
-
-    // Calculate pagination
     const skip = (page - 1) * limit;
 
     const products = await db.product.findMany({
@@ -219,6 +250,15 @@ export async function GET(
         size: true,
         color: true,
         productImages: true,
+        productSpecifications: {
+          include: {
+            specificationField: {
+              include: {
+                group: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",

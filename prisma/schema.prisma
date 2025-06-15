@@ -55,18 +55,59 @@ model PasswordResetToken {
 }
 
 model Store {
-  id            String        @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  userId        String        @db.ObjectId
-  billboards    BillBoard[]   @relation("StoreToBillboard")
-  categories    Category[]    @relation("StoreToCategory")
-  subCategories SubCategory[] @relation("StoreToSubCategory")
-  sizes         Size[]        @relation("StoreToSize")
-  colors        Color[]       @relation("StoreToColor")
-  products      Product[]     @relation("StoreToProduct")
-  orders        Order[]       @relation("StoreToOrder")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  userId              String               @db.ObjectId
+  billboards          BillBoard[]          @relation("StoreToBillboard")
+  categories          Category[]           @relation("StoreToCategory")
+  subCategories       SubCategory[]        @relation("StoreToSubCategory")
+  sizes               Size[]               @relation("StoreToSize")
+  colors              Color[]              @relation("StoreToColor")
+  products            Product[]            @relation("StoreToProduct")
+  orders              Order[]              @relation("StoreToOrder")
+  specificationGroups SpecificationGroup[] @relation("StoreToSpecificationGroup")
+  specificationFields SpecificationField[] @relation("StoreToSpecificationField")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model SpecificationGroup {
+  id                  String               @id @default(auto()) @map("_id") @db.ObjectId
+  storeId             String               @db.ObjectId
+  store               Store                @relation("StoreToSpecificationGroup", fields: [storeId], references: [id], onDelete: Cascade)
+  name                String
+  specificationFields SpecificationField[] @relation("GroupToSpecificationField")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@index([storeId])
+}
+
+model SpecificationField {
+  id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
+  storeId               String                 @db.ObjectId
+  store                 Store                  @relation("StoreToSpecificationField", fields: [storeId], references: [id], onDelete: Cascade)
+  groupId               String                 @db.ObjectId
+  group                 SpecificationGroup     @relation("GroupToSpecificationField", fields: [groupId], references: [id], onDelete: Cascade)
+  name                  String
+  productSpecifications ProductSpecification[] @relation("FieldToProductSpecification")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([storeId, groupId])
+}
+
+model ProductSpecification {
+  id                   String             @id @default(auto()) @map("_id") @db.ObjectId
+  productId            String             @db.ObjectId
+  product              Product            @relation("ProductToProductSpecification", fields: [productId], references: [id], onDelete: Cascade)
+  specificationFieldId String             @db.ObjectId
+  specificationField   SpecificationField @relation("FieldToProductSpecification", fields: [specificationFieldId], references: [id], onDelete: Cascade)
+  value                String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([productId, specificationFieldId])
 }
 
 model BillBoard {
@@ -148,32 +189,33 @@ model Color {
 }
 
 model Product {
-  id              String         @id @default(auto()) @map("_id") @db.ObjectId
-  storeId         String         @db.ObjectId
-  store           Store          @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
-  categoryId      String         @db.ObjectId
-  category        Category       @relation("CategoryToProduct", fields: [categoryId], references: [id], onDelete: Restrict)
-  subCategoryId   String?        @db.ObjectId
-  subCategory     SubCategory?   @relation("SubCategoryToProduct", fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  name            String
-  slug            String         @unique
-  price           Int
-  about           String
-  description     String
-  sizeAndFit      String[]
-  materialAndCare String[]
-  enabledFeatures String[]       @default([])
-  isFeatured      Boolean        @default(false)
-  isArchieved     Boolean        @default(false)
-  stock           Int            @default(0)
-  sizeId          String?        @db.ObjectId
-  size            Size?          @relation(fields: [sizeId], references: [id], onDelete: SetNull)
-  colorId         String?        @db.ObjectId
-  color           Color?         @relation(fields: [colorId], references: [id], onDelete: SetNull)
-  productImages   ProductImage[]
-  orderItems      OrderItem[]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
+  storeId               String                 @db.ObjectId
+  store                 Store                  @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId            String                 @db.ObjectId
+  category              Category               @relation("CategoryToProduct", fields: [categoryId], references: [id], onDelete: Restrict)
+  subCategoryId         String?                @db.ObjectId
+  subCategory           SubCategory?           @relation("SubCategoryToProduct", fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  name                  String
+  slug                  String                 @unique
+  price                 Int
+  about                 String
+  description           String
+  sizeAndFit            String[]
+  materialAndCare       String[]
+  enabledFeatures       String[]               @default([])
+  isFeatured            Boolean                @default(false)
+  isArchieved           Boolean                @default(false)
+  stock                 Int                    @default(0)
+  sizeId                String?                @db.ObjectId
+  size                  Size?                  @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  colorId               String?                @db.ObjectId
+  color                 Color?                 @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  productImages         ProductImage[]
+  productSpecifications ProductSpecification[] @relation("ProductToProductSpecification")
+  orderItems            OrderItem[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
   @@index([sizeId, colorId, categoryId, subCategoryId, storeId])
 }

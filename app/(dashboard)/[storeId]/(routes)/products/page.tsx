@@ -5,7 +5,6 @@ import { db } from "@/lib/db";
 import { ProductColumn } from "@/components/store/utils/columns";
 import { ProductClient } from "@/components/store/utils/product-client";
 
-// Helper to get hierarchical subcategory name
 const getSubCategoryName = (subCategory: any, subCategories: any[]): string => {
   if (!subCategory?.parentId) return subCategory?.name || "None";
   const parent = subCategories.find((sub) => sub.id === subCategory.parentId);
@@ -28,6 +27,15 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
       subCategory: true,
       size: true,
       color: true,
+      productSpecifications: {
+        include: {
+          specificationField: {
+            include: {
+              group: true,
+            },
+          },
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -53,7 +61,13 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     category: item.category.name,
     subCategory: getSubCategoryName(item.subCategory, subCategories),
     size: item.size?.name || "None",
-    color: item.color?.value || "None",
+    // color: item.color?.value || "None",
+    // specifications: item.productSpecifications
+    //   .map(
+    //     (spec) =>
+    //       `${spec.specificationField.group.name}: ${spec.specificationField.name} - ${spec.value}`
+    //   )
+    //   .join(", "),
     createdAt: format(item.createdAt, "MMMM do, yyyy"),
   }));
 

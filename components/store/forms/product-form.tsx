@@ -9,6 +9,7 @@ import {
   ProductImage,
   Size,
   SubCategory,
+  SpecificationField,
 } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -44,9 +45,9 @@ import { ImageUpload } from "@/components/store/utils/image-upload";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { Switch } from "@/components/ui/switch";
 import { ProductFeatures } from "../utils/product-features";
+import { SpecificationInput } from "../utils/specification-input";
 import Editor from "./editor";
 
-// Helper to get hierarchical subcategory name
 const getSubCategoryName = (
   subCategory: SubCategory,
   subCategories: SubCategory[]
@@ -59,11 +60,20 @@ const getSubCategoryName = (
 };
 
 interface ProductFormProps {
-  data: (Product & { productImages: ProductImage[] }) | null;
+  data:
+    | (Product & {
+        productImages: ProductImage[];
+        productSpecifications: {
+          specificationFieldId: string;
+          value: string;
+        }[];
+      })
+    | null;
   categories: Category[];
   subCategories: SubCategory[];
   sizes: Size[];
   colors: Color[];
+  specificationFields: (SpecificationField & { group: { name: string } })[];
 }
 
 export const ProductForm = ({
@@ -72,6 +82,7 @@ export const ProductForm = ({
   subCategories,
   sizes,
   colors,
+  specificationFields,
 }: ProductFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -92,16 +103,17 @@ export const ProductForm = ({
           colorId: data.colorId ?? undefined,
           categoryId: data.categoryId ?? undefined,
           subCategoryId: data.subCategoryId ?? undefined,
-          productImages: data.productImages.map((img) => img.url), // Map to URLs
+          productImages: data.productImages.map((img) => img.url),
           price: data.price || 0,
           stock: data.stock || 0,
           about: data.about || "",
           description: data.description || "",
           materialAndCare: data.materialAndCare || [],
           sizeAndFit: data.sizeAndFit || [],
-          enabledFeatures: data.enabledFeatures || [], // Added
+          enabledFeatures: data.enabledFeatures || [],
           isFeatured: data.isFeatured || false,
           isArchieved: data.isArchieved || false,
+          specifications: data.productSpecifications || [],
         }
       : {
           name: "",
@@ -112,13 +124,14 @@ export const ProductForm = ({
           description: "",
           materialAndCare: [],
           sizeAndFit: [],
-          enabledFeatures: [], // Added
+          enabledFeatures: [],
           categoryId: "",
           subCategoryId: undefined,
           sizeId: undefined,
           colorId: undefined,
           isFeatured: false,
           isArchieved: false,
+          specifications: [],
         },
   });
 
@@ -126,7 +139,6 @@ export const ProductForm = ({
     try {
       setLoading(true);
 
-      // Map "none" to undefined for subCategoryId
       const submitValues = {
         ...values,
         subCategoryId:
@@ -196,6 +208,7 @@ export const ProductForm = ({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Existing fields */}
             <FormField
               control={form.control}
               name="name"
@@ -519,6 +532,24 @@ export const ProductForm = ({
                         (field.value || []).filter((data) => data !== value)
                       )
                     }
+                  />
+                </FormControl>
+                <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="specifications"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specifications</FormLabel>
+                <FormControl>
+                  <SpecificationInput
+                    value={field.value || []}
+                    disabled={loading}
+                    specificationFields={specificationFields}
+                    onChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />

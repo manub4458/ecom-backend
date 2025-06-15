@@ -45,6 +45,16 @@ export const SubNav = ({
         active: pathname === `/${params.storeId}/products`,
       },
       {
+        href: `/${params.storeId}/specification-groups`,
+        label: "Specification Groups",
+        active: pathname === `/${params.storeId}/specification-groups`,
+      },
+      {
+        href: `/${params.storeId}/specification-fields`,
+        label: "Specification Fields",
+        active: pathname === `/${params.storeId}/specification-fields`,
+      },
+      {
         href: `/${params.storeId}/orders`,
         label: "Orders",
         active: pathname === `/${params.storeId}/orders`,

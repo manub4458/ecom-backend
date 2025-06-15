@@ -163,7 +163,7 @@ export type ProductColumn = {
   category: string;
   subCategory?: string;
   size: string;
-  color: string;
+  color?: string;
   createdAt: string;
 };
 
@@ -200,18 +200,22 @@ export const productColumns: ColumnDef<ProductColumn>[] = [
     accessorKey: "isFeatured",
     header: "Featured",
   },
-  {
-    accessorKey: "color",
-    header: "Color",
-    cell: ({ row }) => (
-      <div className="flex items-center">
-        <div
-          className="h-5 w-6 rounded-full"
-          style={{ backgroundColor: row.original.color }}
-        />
-      </div>
-    ),
-  },
+  // {
+  //   accessorKey: "specifications",
+  //   header: "Specifications",
+  // },
+  // {
+  //   accessorKey: "color",
+  //   header: "Color",
+  //   cell: ({ row }) => (
+  //     <div className="flex items-center">
+  //       <div
+  //         className="h-5 w-6 rounded-full"
+  //         style={{ backgroundColor: row.original.color }}
+  //       />
+  //     </div>
+  //   ),
+  // },
   {
     accessorKey: "createdAt",
     header: "Date",
