@@ -192,8 +192,8 @@ model Product {
   id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
   storeId               String                 @db.ObjectId
   store                 Store                  @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
-  categoryId            String                 @db.ObjectId
-  category              Category               @relation("CategoryToProduct", fields: [categoryId], references: [id], onDelete: Restrict)
+  categoryId            String?                @db.ObjectId
+  category              Category?              @relation("CategoryToProduct", fields: [categoryId], references: [id], onDelete: Restrict)
   subCategoryId         String?                @db.ObjectId
   subCategory           SubCategory?           @relation("SubCategoryToProduct", fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   name                  String

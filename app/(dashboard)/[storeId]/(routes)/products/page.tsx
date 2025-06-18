@@ -58,7 +58,7 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     isArchieved: item.isArchieved,
     price: item.price.toString(),
     stock: item.stock,
-    category: item.category.name,
+    category: item?.category?.name || "",
     subCategory: getSubCategoryName(item.subCategory, subCategories),
     size: item.size?.name || "None",
     // color: item.color?.value || "None",
