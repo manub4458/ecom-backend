@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { SubCategorySchema } from "@/schemas/subcategory-form-schema";
 import { NextResponse } from "next/server";
-import { generateUniqueSlug } from "@/lib/slugify";
 
 async function isValidParent(
   subCategoryId: string | null,
@@ -35,7 +34,7 @@ export async function POST(
       return new NextResponse("Invalid data provided", { status: 400 });
     }
 
-    const { name, billboardId, bannerImage, categoryId, parentId } =
+    const { name, slug, billboardId, bannerImage, categoryId, parentId } =
       validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -75,9 +74,6 @@ export async function POST(
       }
     }
 
-    // Generate unique slug
-    const slug = await generateUniqueSlug(name, "SubCategory");
-
     const subCategory = await db.subCategory.create({
       data: {
         name,
@@ -91,8 +87,11 @@ export async function POST(
     });
 
     return NextResponse.json(subCategory);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[SUBCATEGORIES_POST]", error);
+    if (error.code === "P2002") {
+      return new NextResponse("Slug already exists", { status: 400 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

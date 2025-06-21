@@ -61,13 +61,6 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     category: item?.category?.name || "",
     subCategory: getSubCategoryName(item.subCategory, subCategories),
     size: item.size?.name || "None",
-    // color: item.color?.value || "None",
-    // specifications: item.productSpecifications
-    //   .map(
-    //     (spec) =>
-    //       `${spec.specificationField.group.name}: ${spec.specificationField.name} - ${spec.value}`
-    //   )
-    //   .join(", "),
     createdAt: format(item.createdAt, "MMMM do, yyyy"),
   }));
 

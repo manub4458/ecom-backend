@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { NextResponse } from "next/server";
-import { generateUniqueSlug } from "@/lib/slugify";
 
 export async function POST(
   request: Request,
@@ -19,6 +18,7 @@ export async function POST(
 
     const {
       name,
+      slug,
       price,
       about,
       description,
@@ -52,7 +52,6 @@ export async function POST(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Validate subCategoryId
     if (subCategoryId) {
       const subCategory = await db.subCategory.findUnique({
         where: { id: subCategoryId },
@@ -68,7 +67,6 @@ export async function POST(
       }
     }
 
-    // Validate specificationFieldIds
     if (specifications && specifications.length > 0) {
       const specificationFieldIds = specifications.map(
         (spec) => spec.specificationFieldId
@@ -87,9 +85,6 @@ export async function POST(
         );
       }
     }
-
-    // Generate unique slug
-    const slug = await generateUniqueSlug(name, "Product");
 
     const product = await db.product.create({
       data: {
@@ -125,8 +120,11 @@ export async function POST(
     });
 
     return NextResponse.json(product);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[PRODUCTS_POST]", error);
+    if (error.code === "P2002") {
+      return new NextResponse("Slug already exists", { status: 400 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

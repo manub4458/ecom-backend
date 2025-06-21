@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -67,6 +68,7 @@ export const SubCategoryForm = ({
     defaultValues: initialData
       ? {
           name: initialData.name,
+          slug: initialData.slug || "",
           billboardId: initialData.billboardId,
           bannerImage: initialData.bannerImage,
           categoryId: initialData.categoryId,
@@ -74,6 +76,7 @@ export const SubCategoryForm = ({
         }
       : {
           name: "",
+          slug: "",
           billboardId: "",
           bannerImage: "",
           categoryId: "",
@@ -123,9 +126,19 @@ export const SubCategoryForm = ({
       router.refresh();
       router.push(`/${params.storeId}/subcategories`);
       toast.success(toastMessage);
-    } catch (error) {
+    } catch (error: any) {
       console.log("[SUBCATEGORY_FORM]", error);
-      toast.error("Something went wrong.");
+      if (
+        error.response?.status === 400 &&
+        error.response?.data === "Slug already exists"
+      ) {
+        form.setError("slug", {
+          type: "manual",
+          message: "Slug already exists. Please choose a different slug.",
+        });
+      } else {
+        toast.error("Something went wrong.");
+      }
     } finally {
       setLoading(false);
     }
@@ -195,6 +208,27 @@ export const SubCategoryForm = ({
             />
             <FormField
               control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Slug</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Subcategory slug"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs text-muted-foreground">
+                    The slug must be unique, contain only lowercase letters,
+                    numbers, and hyphens, and be at most 60 characters long.
+                  </FormDescription>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="billboardId"
               render={({ field }) => (
                 <FormItem>
@@ -233,7 +267,7 @@ export const SubCategoryForm = ({
                   <FormLabel>Category</FormLabel>
                   <Select
                     //@ts-ignore
-                    disabled={loading || (parentId && parentId !== "none")} // Disable if parentId is selected
+                    disabled={loading || (parentId && parentId !== "none")}
                     onValueChange={field.onChange}
                     value={field.value}
                     defaultValue={field.value}
@@ -281,7 +315,7 @@ export const SubCategoryForm = ({
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>
                       {subCategories
-                        .filter((sub) => sub.id !== initialData?.id) // Exclude self
+                        .filter((sub) => sub.id !== initialData?.id)
                         .map((subCategory) => (
                           <SelectItem
                             key={subCategory.id}

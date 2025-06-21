@@ -99,6 +99,7 @@ export const ProductForm = ({
     defaultValues: data
       ? {
           ...data,
+          slug: data.slug || "",
           sizeId: data.sizeId ?? undefined,
           colorId: data.colorId ?? undefined,
           categoryId: data.categoryId ?? undefined,
@@ -117,6 +118,7 @@ export const ProductForm = ({
         }
       : {
           name: "",
+          slug: "",
           productImages: [],
           price: 0,
           stock: 0,
@@ -157,9 +159,19 @@ export const ProductForm = ({
       router.push(`/${params.storeId}/products`);
       router.refresh();
       toast.success(toastMessage);
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
-      toast.error("Internal server error");
+      if (
+        error.response?.status === 400 &&
+        error.response?.data === "Slug already exists"
+      ) {
+        form.setError("slug", {
+          type: "manual",
+          message: "Slug already exists. Please choose a different slug.",
+        });
+      } else {
+        toast.error("Internal server error");
+      }
     } finally {
       setLoading(false);
     }
@@ -208,7 +220,6 @@ export const ProductForm = ({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Existing fields */}
             <FormField
               control={form.control}
               name="name"
@@ -226,7 +237,8 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-            <FormField
+
+            {/* <FormField
               control={form.control}
               name="about"
               render={({ field }) => (
@@ -239,6 +251,28 @@ export const ProductForm = ({
                       placeholder="About Product"
                     />
                   </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            /> */}
+
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Slug</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Product slug"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs text-muted-foreground">
+                    The slug must be unique, contain only lowercase letters,
+                    numbers, and hyphens, and be at most 60 characters long.
+                  </FormDescription>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
@@ -281,6 +315,7 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="stock"

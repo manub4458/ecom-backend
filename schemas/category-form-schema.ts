@@ -4,6 +4,14 @@ export const CategoryFormSchema = z.object({
   name: z.string().min(1, {
     message: "Name is required",
   }),
+  slug: z
+    .string()
+    .min(1, "Slug is required")
+    .max(60, "Slug must be at most 60 characters")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug must contain only lowercase letters, numbers, and hyphens"
+    ),
   billboardId: z.string().min(1, {
     message: "Billboard is required",
   }),

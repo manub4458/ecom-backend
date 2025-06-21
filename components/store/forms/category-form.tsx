@@ -1,4 +1,3 @@
-// components/store/forms/category-form.tsx
 "use client";
 
 import * as z from "zod";
@@ -13,6 +12,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -51,11 +51,19 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
 
   const form = useForm<z.infer<typeof CategoryFormSchema>>({
     resolver: zodResolver(CategoryFormSchema),
-    defaultValues: data || {
-      name: "",
-      bannerImage: "",
-      billboardId: "",
-    },
+    defaultValues: data
+      ? {
+          name: data.name,
+          slug: data.slug || "",
+          billboardId: data.billboardId,
+          bannerImage: data.bannerImage,
+        }
+      : {
+          name: "",
+          slug: "",
+          billboardId: "",
+          bannerImage: "",
+        },
   });
 
   const onSubmit = async (values: z.infer<typeof CategoryFormSchema>) => {
@@ -72,9 +80,19 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
       router.refresh();
       router.push(`/${params.storeId}/categories`);
       toast.success(toastMessage);
-    } catch (error) {
+    } catch (error: any) {
       console.error("[CATEGORY_FORM] Error:", error);
-      toast.error("Internal server error");
+      if (
+        error.response?.status === 400 &&
+        error.response?.data === "Slug already exists"
+      ) {
+        form.setError("slug", {
+          type: "manual",
+          message: "Slug already exists. Please choose a different slug.",
+        });
+      } else {
+        toast.error("Internal server error");
+      }
     } finally {
       setLoading(false);
     }
@@ -137,6 +155,27 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
                       placeholder="Category name"
                     />
                   </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Slug</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Category slug"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs text-muted-foreground">
+                    The slug must be unique, contain only lowercase letters,
+                    numbers, and hyphens, and be at most 60 characters long.
+                  </FormDescription>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}

@@ -199,7 +199,7 @@ model Product {
   name                  String
   slug                  String                 @unique
   price                 Int
-  about                 String
+  about                 String?
   description           String
   sizeAndFit            String[]
   materialAndCare       String[]

@@ -1,30 +1,25 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { generateUniqueSlug } from "@/lib/slugify";
+import { CategoryFormSchema } from "@/schemas/category-form-schema";
 
 export async function POST(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { name, billboardId, bannerImage } = await request.json();
     const session = await auth();
+    const body = await request.json();
+    const validatedData = CategoryFormSchema.safeParse(body);
+
+    if (!validatedData.success) {
+      return new NextResponse("Invalid data provided", { status: 400 });
+    }
+
+    const { name, slug, billboardId, bannerImage } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
-    }
-
-    if (!name) {
-      return new NextResponse("Name is required", { status: 400 });
-    }
-
-    if (!billboardId) {
-      return new NextResponse("Billboard Id is required", { status: 400 });
-    }
-
-    if (!bannerImage) {
-      return new NextResponse("Banner image is required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -41,9 +36,6 @@ export async function POST(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Generate unique slug
-    const slug = await generateUniqueSlug(name, "Category");
-
     const category = await db.category.create({
       data: {
         name,
@@ -55,8 +47,11 @@ export async function POST(
     });
 
     return NextResponse.json(category);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[CATEGORIES_POST]", error);
+    if (error.code === "P2002") {
+      return new NextResponse("Slug already exists", { status: 400 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
@@ -70,11 +65,9 @@ export async function GET(
       return new NextResponse("Store Id is required", { status: 400 });
     }
 
-    // Get search params from URL
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");
 
-    // If slug is provided, fetch a single category by slug
     if (slug) {
       const category = await db.category.findUnique({
         where: {
@@ -109,7 +102,6 @@ export async function GET(
       return NextResponse.json(category);
     }
 
-    // Otherwise, fetch all categories for the store
     const categories = await db.category.findMany({
       where: {
         storeId: params.storeId,
@@ -135,7 +127,6 @@ export async function GET(
       },
     });
 
-    // Transform subCategories to include only top-level subcategories
     const transformedCategories = categories.map((category) => ({
       ...category,
       subCategories: category.subCategories

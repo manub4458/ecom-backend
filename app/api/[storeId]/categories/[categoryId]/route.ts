@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { generateUniqueSlug } from "@/lib/slugify";
+import { CategoryFormSchema } from "@/schemas/category-form-schema";
 
 export async function PATCH(
   request: Request,
@@ -9,22 +9,17 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    const { name, billboardId, bannerImage } = await request.json();
+    const body = await request.json();
+    const validatedData = CategoryFormSchema.safeParse(body);
+
+    if (!validatedData.success) {
+      return new NextResponse("Invalid data provided", { status: 400 });
+    }
+
+    const { name, slug, billboardId, bannerImage } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
-    }
-
-    if (!name) {
-      return new NextResponse("Name is required", { status: 400 });
-    }
-
-    if (!billboardId) {
-      return new NextResponse("Billboard Id is required", { status: 400 });
-    }
-
-    if (!bannerImage) {
-      return new NextResponse("Banner Image is required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -45,9 +40,6 @@ export async function PATCH(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Generate unique slug
-    const slug = await generateUniqueSlug(name, "Category", params.categoryId);
-
     const category = await db.category.update({
       where: {
         id: params.categoryId,
@@ -61,8 +53,11 @@ export async function PATCH(
     });
 
     return NextResponse.json(category);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[CATEGORIES_PATCH]", error);
+    if (error.code === "P2002") {
+      return new NextResponse("Slug already exists", { status: 400 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
@@ -96,7 +91,6 @@ export async function DELETE(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Check for related products or subcategories
     const products = await db.product.findFirst({
       where: { categoryId: params.categoryId },
     });

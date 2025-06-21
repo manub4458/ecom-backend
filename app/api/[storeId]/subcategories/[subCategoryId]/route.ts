@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { SubCategorySchema } from "@/schemas/subcategory-form-schema";
 import { NextResponse } from "next/server";
-import { generateUniqueSlug } from "@/lib/slugify";
 
 async function isValidParent(
   subCategoryId: string | null,
@@ -35,7 +34,7 @@ export async function PATCH(
       return new NextResponse("Invalid attributes", { status: 400 });
     }
 
-    const { name, billboardId, bannerImage, categoryId, parentId } =
+    const { name, slug, billboardId, bannerImage, categoryId, parentId } =
       validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -85,13 +84,6 @@ export async function PATCH(
       }
     }
 
-    // Generate unique slug
-    const slug = await generateUniqueSlug(
-      name,
-      "SubCategory",
-      params.subCategoryId
-    );
-
     const subCategory = await db.subCategory.update({
       where: { id: params.subCategoryId },
       data: {
@@ -105,8 +97,11 @@ export async function PATCH(
     });
 
     return NextResponse.json(subCategory);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[SUBCATEGORY_PATCH]", error);
+    if (error.code === "P2002") {
+      return new NextResponse("Slug already exists", { status: 400 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

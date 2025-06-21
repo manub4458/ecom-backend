@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { NextResponse } from "next/server";
-import { generateUniqueSlug } from "@/lib/slugify";
 
 export async function PATCH(
   request: Request,
@@ -19,6 +18,7 @@ export async function PATCH(
 
     const {
       name,
+      slug,
       price,
       about,
       description,
@@ -56,7 +56,6 @@ export async function PATCH(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Validate subCategoryId
     if (subCategoryId) {
       const subCategory = await db.subCategory.findUnique({
         where: { id: subCategoryId },
@@ -72,7 +71,6 @@ export async function PATCH(
       }
     }
 
-    // Validate specificationFieldIds
     if (specifications && specifications.length > 0) {
       const specificationFieldIds = specifications.map(
         (spec) => spec.specificationFieldId
@@ -91,9 +89,6 @@ export async function PATCH(
         );
       }
     }
-
-    // Generate unique slug
-    const slug = await generateUniqueSlug(name, "Product", params.productId);
 
     const product = await db.product.update({
       where: { id: params.productId },
@@ -118,7 +113,7 @@ export async function PATCH(
           create: productImages.map((url) => ({ url })),
         },
         productSpecifications: {
-          deleteMany: {}, // Remove existing specifications
+          deleteMany: {},
           create: specifications?.map((spec) => ({
             specificationFieldId: spec.specificationFieldId,
             value: spec.value,
@@ -131,8 +126,11 @@ export async function PATCH(
     });
 
     return NextResponse.json(product);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[PRODUCT_PATCH]", error);
+    if (error.code === "P2002") {
+      return new NextResponse("Slug already exists", { status: 400 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
@@ -184,7 +182,6 @@ export async function GET(
       return new NextResponse("Product Id is required", { status: 400 });
     }
 
-    // Get search params from URL for potential filtering
     const { searchParams } = new URL(request.url);
     const includeRelated = searchParams.get("includeRelated") === "true";
     const categoryId = searchParams.get("categoryId");
@@ -194,10 +191,9 @@ export async function GET(
       categoryId,
     });
 
-    // Build the where clause
     const where: any = {
       id: params.productId,
-      isArchieved: false, // Only show active products
+      isArchieved: false,
     };
 
     if (categoryId) {
@@ -221,7 +217,7 @@ export async function GET(
           include: {
             specificationField: {
               include: {
-                group: true, // Include the group for each specification field
+                group: true,
               },
             },
           },
