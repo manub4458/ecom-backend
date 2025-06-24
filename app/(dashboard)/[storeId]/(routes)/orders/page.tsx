@@ -18,7 +18,13 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
     include: {
       orderItems: {
         include: {
-          product: true,
+          variant: {
+            include: {
+              product: true,
+              size: true,
+              color: true,
+            },
+          },
         },
       },
     },
@@ -27,21 +33,45 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
     },
   });
 
-  const formattedOrders: OrderColumn[] = orders.map((item) => ({
-    id: item.id,
-    phone: item.phone,
-    address: item.address,
-    isPaid: item.isPaid,
-    products: item.orderItems
-      .map((orderItem) => orderItem.product.name)
-      .join(", "),
-    totalPrice: formatter.format(
-      item.orderItems.reduce((total, item) => {
-        return total + item.product.price * item.quantity;
-      }, 0)
-    ),
-    createdAt: format(item.createdAt, "MMMM do, yyyy"),
-  }));
+  const formattedOrders: OrderColumn[] = orders
+    .map((item) => {
+      // Filter valid orderItems with non-null variantId and variant
+      const validOrderItems = item.orderItems.filter(
+        (orderItem) => orderItem.variantId && orderItem.variant
+      );
+
+      // Skip orders with no valid orderItems
+      if (validOrderItems.length === 0) {
+        return null;
+      }
+
+      return {
+        id: item.id,
+        phone: item.phone,
+        address: item.address,
+        isPaid: item.isPaid,
+        products: validOrderItems
+          .map((orderItem) => {
+            const variant = orderItem.variant;
+            const details = [
+              variant.product.name,
+              variant.size?.value ? `(${variant.size.value}` : "",
+              variant.color?.name ? `${variant.color.name})` : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            return details;
+          })
+          .join(", "),
+        totalPrice: formatter.format(
+          validOrderItems.reduce((total, item) => {
+            return total + item.variant.price * item.quantity;
+          }, 0)
+        ),
+        createdAt: format(item.createdAt, "MMMM do, yyyy"),
+      };
+    })
+    .filter((order): order is OrderColumn => order !== null);
 
   return (
     <div className="flex flex-col">

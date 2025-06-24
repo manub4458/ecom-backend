@@ -6,10 +6,11 @@ import {
   Category,
   Color,
   Product,
-  ProductImage,
   Size,
   SubCategory,
   SpecificationField,
+  Variant,
+  VariantImage,
 } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -42,11 +43,12 @@ import { Input } from "@/components/ui/input";
 import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { ImageUpload } from "@/components/store/utils/image-upload";
-import { ProductSchema } from "@/schemas/product-form-schema";
+import { ProductSchema, VariantSchema } from "@/schemas/product-form-schema";
 import { Switch } from "@/components/ui/switch";
 import { ProductFeatures } from "../utils/product-features";
 import { SpecificationInput } from "../utils/specification-input";
 import Editor from "./editor";
+import VariantForm from "./variant-form";
 
 const getSubCategoryName = (
   subCategory: SubCategory,
@@ -62,7 +64,7 @@ const getSubCategoryName = (
 interface ProductFormProps {
   data:
     | (Product & {
-        productImages: ProductImage[];
+        variants: (Variant & { images: VariantImage[] })[];
         productSpecifications: {
           specificationFieldId: string;
           value: string;
@@ -100,13 +102,8 @@ export const ProductForm = ({
       ? {
           ...data,
           slug: data.slug || "",
-          sizeId: data.sizeId ?? undefined,
-          colorId: data.colorId ?? undefined,
           categoryId: data.categoryId ?? undefined,
           subCategoryId: data.subCategoryId ?? undefined,
-          productImages: data.productImages.map((img) => img.url),
-          price: data.price || 0,
-          stock: data.stock || 0,
           about: data.about || "",
           description: data.description || "",
           materialAndCare: data.materialAndCare || [],
@@ -115,13 +112,14 @@ export const ProductForm = ({
           isFeatured: data.isFeatured || false,
           isArchieved: data.isArchieved || false,
           specifications: data.productSpecifications || [],
+          variants: data.variants.map((v: any) => ({
+            ...v,
+            images: v.images.map((img: any) => img.url),
+          })),
         }
       : {
           name: "",
           slug: "",
-          productImages: [],
-          price: 0,
-          stock: 0,
           about: "",
           description: "",
           materialAndCare: [],
@@ -129,11 +127,19 @@ export const ProductForm = ({
           enabledFeatures: [],
           categoryId: "",
           subCategoryId: undefined,
-          sizeId: undefined,
-          colorId: undefined,
           isFeatured: false,
           isArchieved: false,
           specifications: [],
+          variants: [
+            {
+              price: 0,
+              stock: 0,
+              images: [],
+              sizeId: undefined,
+              colorId: undefined,
+              sku: "",
+            },
+          ],
         },
   });
 
@@ -238,7 +244,7 @@ export const ProductForm = ({
               )}
             />
 
-            {/* <FormField
+            <FormField
               control={form.control}
               name="about"
               render={({ field }) => (
@@ -254,7 +260,7 @@ export const ProductForm = ({
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
-            /> */}
+            />
 
             <FormField
               control={form.control}
@@ -294,7 +300,7 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="price"
               render={({ field }) => (
@@ -334,7 +340,7 @@ export const ProductForm = ({
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
-            />
+            /> */}
             <FormField
               control={form.control}
               name="categoryId"
@@ -409,7 +415,7 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="colorId"
               render={({ field }) => (
@@ -478,7 +484,7 @@ export const ProductForm = ({
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
-            />
+            /> */}
             <FormField
               control={form.control}
               name="isFeatured"
@@ -591,7 +597,7 @@ export const ProductForm = ({
               </FormItem>
             )}
           />
-          <FormField
+          {/* <FormField
             control={form.control}
             name="productImages"
             render={({ field }) => (
@@ -607,6 +613,24 @@ export const ProductForm = ({
                         field.value.filter((current) => current !== url)
                       )
                     }
+                  />
+                </FormControl>
+                <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+              </FormItem>
+            )}
+          /> */}
+          <FormField
+            control={form.control}
+            name="variants"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Variants</FormLabel>
+                <FormControl>
+                  <VariantForm
+                    value={field.value}
+                    onChange={field.onChange}
+                    sizes={sizes}
+                    colors={colors}
                   />
                 </FormControl>
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />

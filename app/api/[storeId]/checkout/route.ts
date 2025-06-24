@@ -25,28 +25,52 @@ export async function POST(
       await request.json();
 
     if (!products || products.length === 0) {
-      return new NextResponse("Product Ids are required", { status: 401 });
+      return new NextResponse("Variant IDs are required", { status: 400 });
     }
 
-    const productIds = products.map((product) => product.id);
+    const variantIds = products.map((product) => product.id);
 
-    const allProducts = await db.product.findMany({
+    // Fetch variants instead of products
+    const allVariants = await db.variant.findMany({
       where: {
         id: {
-          in: productIds,
+          in: variantIds,
         },
       },
+      include: {
+        product: true, // Include product for name/about
+        size: true,
+        color: true,
+      },
     });
+
+    // Validate all requested variants exist
+    if (allVariants.length !== variantIds.length) {
+      return new NextResponse("Some variants not found", { status: 400 });
+    }
+
+    // Check stock availability
+    for (const product of products) {
+      const variant = allVariants.find((v) => v.id === product.id);
+      if (!variant || variant.stock < product.quantity) {
+        return new NextResponse(
+          `Insufficient stock for variant ${product.id}`,
+          { status: 400 }
+        );
+      }
+    }
 
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID!,
       key_secret: process.env.RAZORPAY_KEY_SECRET!,
     });
 
-    const lineItems = allProducts.map((product) => ({
-      quantity: products.find((item) => product.id === item.id)?.quantity || 1,
-      amount: product.price * 100, // Razorpay expects amount in paise
-      name: product.about,
+    const lineItems = allVariants.map((variant) => ({
+      quantity: products.find((p) => p.id === variant.id)?.quantity || 1,
+      amount: variant.price * 100, // Razorpay expects amount in paise
+      name: `${variant.product.name} (${variant.size?.value || ""}, ${
+        variant.color?.name || ""
+      })`,
     }));
 
     const totalAmount = lineItems.reduce(
@@ -60,9 +84,9 @@ export async function POST(
         isPaid: false,
         orderItems: {
           create: products.map((product) => ({
-            product: {
+            variant: {
               connect: {
-                id: product.id,
+                id: product.id, // Connect variantId
               },
             },
             quantity: product.quantity,
@@ -71,18 +95,18 @@ export async function POST(
       },
     });
 
-    const razorpayOrder = await razorpay.orders.create({
+    const razorCheckout = await razorpay.orders.create({
       amount: totalAmount,
       currency: "INR",
       receipt: orderId,
       notes: {
-        orderId: order.id,
+        id: order.id,
       },
     });
 
     return NextResponse.json(
       {
-        orderId: razorpayOrder.id,
+        orderId: razorCheckout.id,
         amount: totalAmount,
         currency: "INR",
         key: process.env.RAZORPAY_KEY_ID!,
@@ -93,6 +117,6 @@ export async function POST(
     );
   } catch (error) {
     console.log("PAYMENT_ERROR", error);
-    return new NextResponse("Internal server Error", { status: 500 });
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
