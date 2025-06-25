@@ -13,26 +13,28 @@ export async function PATCH(
     const validatedData = ProductSchema.safeParse(body);
 
     if (!validatedData.success) {
-      return new NextResponse("Invalid attributes", { status: 400 });
+      return new NextResponse(
+        JSON.stringify({ errors: validatedData.error.format() }),
+        { status: 400 }
+      );
     }
 
     const {
       name,
       slug,
-      price,
+      brand,
       about,
       description,
       sizeAndFit,
       materialAndCare,
       enabledFeatures,
+      expressDelivery,
+      warranty,
       isFeatured,
       isArchieved,
-      stock,
       categoryId,
       subCategoryId,
-      sizeId,
-      colorId,
-      productImages,
+      variants,
       specifications,
     } = validatedData.data;
 
@@ -41,11 +43,11 @@ export async function PATCH(
     }
 
     if (!params.storeId) {
-      return new NextResponse("Store Id is required", { status: 400 });
+      return new NextResponse("Store ID is required", { status: 400 });
     }
 
     if (!params.productId) {
-      return new NextResponse("Product Id is required", { status: 401 });
+      return new NextResponse("Product ID is required", { status: 400 });
     }
 
     const storeById = await db.store.findUnique({
@@ -56,6 +58,15 @@ export async function PATCH(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
+    // Validate category
+    const category = await db.category.findUnique({
+      where: { id: categoryId },
+    });
+    if (!category) {
+      return new NextResponse("Invalid category", { status: 400 });
+    }
+
+    // Validate subcategory if provided
     if (subCategoryId) {
       const subCategory = await db.subCategory.findUnique({
         where: { id: subCategoryId },
@@ -71,6 +82,7 @@ export async function PATCH(
       }
     }
 
+    // Validate specifications
     if (specifications && specifications.length > 0) {
       const specificationFieldIds = specifications.map(
         (spec) => spec.specificationFieldId
@@ -90,37 +102,104 @@ export async function PATCH(
       }
     }
 
+    // Validate variants
+    for (const variant of variants) {
+      if (variant.sizeId) {
+        const size = await db.size.findUnique({
+          where: { id: variant.sizeId },
+        });
+        if (!size) {
+          return new NextResponse("Invalid size in variant", { status: 400 });
+        }
+      }
+      if (variant.colorId) {
+        const color = await db.color.findUnique({
+          where: { id: variant.colorId },
+        });
+        if (!color) {
+          return new NextResponse("Invalid color in variant", { status: 400 });
+        }
+      }
+      if (variant.sku && !variant.id) {
+        // Only check SKU uniqueness for new variants (no id)
+        const existingVariant = await db.variant.findFirst({
+          where: {
+            sku: variant.sku,
+          },
+        });
+        if (existingVariant) {
+          return new NextResponse(`SKU ${variant.sku} already exists`, {
+            status: 400,
+          });
+        }
+      }
+    }
+
+    // Update product
     const product = await db.product.update({
       where: { id: params.productId },
       data: {
         name,
         slug,
-        price,
+        brand,
         about,
         description,
         sizeAndFit,
         materialAndCare,
         enabledFeatures,
+        expressDelivery,
+        warranty,
         isFeatured,
         isArchieved,
-        stock,
         categoryId,
         subCategoryId,
-        sizeId,
-        colorId,
-        productImages: {
-          deleteMany: {},
-          create: productImages.map((url) => ({ url })),
-        },
         productSpecifications: {
-          deleteMany: {},
+          deleteMany: {}, // Remove existing specs
           create: specifications?.map((spec) => ({
             specificationFieldId: spec.specificationFieldId,
             value: spec.value,
           })),
         },
+        variants: {
+          upsert: variants.map((variant) => ({
+            where: { id: variant.id || "non-existent-id" }, // Use id if provided
+            update: {
+              price: variant.price,
+              mrp: variant.mrp,
+              stock: variant.stock,
+              sku: variant.sku || undefined,
+              sizeId: variant.sizeId || undefined,
+              colorId: variant.colorId || undefined,
+              images: {
+                deleteMany: {},
+                create: variant.images.map((url) => ({ url })),
+              },
+            },
+            create: {
+              price: variant.price,
+              mrp: variant.mrp,
+              stock: variant.stock,
+              sku: variant.sku || undefined,
+              sizeId: variant.sizeId || undefined,
+              colorId: variant.colorId || undefined,
+              images: {
+                create: variant.images.map((url) => ({ url })),
+              },
+            },
+          })),
+          deleteMany: {
+            id: {
+              notIn: variants.filter((v) => v.id).map((v) => v.id as string),
+            },
+          },
+        },
       },
       include: {
+        variants: {
+          include: {
+            images: true,
+          },
+        },
         productSpecifications: true,
       },
     });
@@ -129,7 +208,7 @@ export async function PATCH(
   } catch (error: any) {
     console.log("[PRODUCT_PATCH]", error);
     if (error.code === "P2002") {
-      return new NextResponse("Slug already exists", { status: 400 });
+      return new NextResponse("Slug or SKU already exists", { status: 400 });
     }
     return new NextResponse("Internal server error", { status: 500 });
   }
@@ -147,11 +226,11 @@ export async function DELETE(
     }
 
     if (!params.storeId) {
-      return new NextResponse("Store Id is required", { status: 400 });
+      return new NextResponse("Store ID is required", { status: 400 });
     }
 
     if (!params.productId) {
-      return new NextResponse("Product Id is required", { status: 400 });
+      return new NextResponse("Product ID is required", { status: 400 });
     }
 
     const storeById = await db.store.findUnique({
@@ -162,13 +241,28 @@ export async function DELETE(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    const product = await db.product.delete({
-      where: { id: params.productId },
+    // Delete the product and its related data within a transaction
+    const product = await db.$transaction(async (prisma) => {
+      // Delete product specifications
+      await prisma.productSpecification.deleteMany({
+        where: { productId: params.productId },
+      });
+
+      // Delete the product (variants and order items will cascade)
+      return await prisma.product.delete({
+        where: { id: params.productId },
+      });
     });
 
     return NextResponse.json(product);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[PRODUCT_DELETE]", error);
+    if (error.code === "P2023") {
+      return new NextResponse("Invalid product ID", { status: 400 });
+    }
+    if (error.code === "P2025") {
+      return new NextResponse("Product not found", { status: 404 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
@@ -179,29 +273,18 @@ export async function GET(
 ) {
   try {
     if (!params.productId) {
-      return new NextResponse("Product Id is required", { status: 400 });
+      return new NextResponse("Product ID is required", { status: 400 });
     }
 
     const { searchParams } = new URL(request.url);
     const includeRelated = searchParams.get("includeRelated") === "true";
     const categoryId = searchParams.get("categoryId");
 
-    console.log("Fetching product:", params.productId, "with filters:", {
-      includeRelated,
-      categoryId,
-    });
-
-    const where: any = {
-      id: params.productId,
-      isArchieved: false,
-    };
-
-    if (categoryId) {
-      where.categoryId = categoryId;
-    }
-
     const product = await db.product.findUnique({
-      where,
+      where: {
+        id: params.productId,
+        isArchieved: false,
+      },
       include: {
         category: true,
         subCategory: {
@@ -210,9 +293,13 @@ export async function GET(
             billboard: true,
           },
         },
-        size: true,
-        color: true,
-        productImages: true,
+        variants: {
+          include: {
+            size: true,
+            color: true,
+            images: true,
+          },
+        },
         productSpecifications: {
           include: {
             specificationField: {
@@ -234,9 +321,7 @@ export async function GET(
       relatedProducts = await db.product.findMany({
         where: {
           categoryId: product.categoryId,
-          id: {
-            not: product.id,
-          },
+          id: { not: product.id },
           isArchieved: false,
         },
         include: {
@@ -247,9 +332,13 @@ export async function GET(
               billboard: true,
             },
           },
-          size: true,
-          color: true,
-          productImages: true,
+          variants: {
+            include: {
+              size: true,
+              color: true,
+              images: true,
+            },
+          },
           productSpecifications: {
             include: {
               specificationField: {

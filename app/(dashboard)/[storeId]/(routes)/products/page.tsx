@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { format } from "date-fns";
 import { db } from "@/lib/db";
+import { ColumnDef } from "@tanstack/react-table";
 
 import { ProductColumn } from "@/components/store/utils/columns";
 import { ProductClient } from "@/components/store/utils/product-client";
@@ -10,7 +11,7 @@ const getSubCategoryName = (subCategory: any, subCategories: any[]): string => {
   const parent = subCategories.find((sub) => sub.id === subCategory.parentId);
   return parent
     ? `${getSubCategoryName(parent, subCategories)} > ${subCategory.name}`
-    : subCategory.name;
+    : subCategory?.name || "None";
 };
 
 export const metadata: Metadata = {
@@ -24,9 +25,18 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     },
     include: {
       category: true,
-      subCategory: true,
-      size: true,
-      color: true,
+      subCategory: {
+        include: {
+          parent: true,
+        },
+      },
+      variants: {
+        include: {
+          size: true,
+          color: true,
+          images: true,
+        },
+      },
       productSpecifications: {
         include: {
           specificationField: {
@@ -51,18 +61,27 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     },
   });
 
-  const formattedProducts: ProductColumn[] = products.map((item) => ({
-    id: item.id,
-    name: item.name,
-    isFeatured: item.isFeatured,
-    isArchieved: item.isArchieved,
-    price: item.price.toString(),
-    stock: item.stock,
-    category: item?.category?.name || "",
-    subCategory: getSubCategoryName(item.subCategory, subCategories),
-    size: item.size?.name || "None",
-    createdAt: format(item.createdAt, "MMMM do, yyyy"),
-  }));
+  const formattedProducts: ProductColumn[] = products.map((product) => {
+    const firstVariant = product.variants[0];
+    const price = firstVariant?.price?.toString() || "N/A";
+    const stock = firstVariant?.stock || 0;
+    const size = firstVariant?.size?.value || "None";
+    const color = firstVariant?.color?.name || "None";
+
+    return {
+      id: product.id,
+      name: product.name,
+      isFeatured: product.isFeatured,
+      isArchieved: product.isArchieved,
+      price,
+      stock,
+      size,
+      color,
+      category: product.category?.name || "None",
+      subCategory: getSubCategoryName(product.subCategory, subCategories),
+      createdAt: format(product.createdAt, "MMMM do, yyyy"),
+    };
+  });
 
   return (
     <div className="flex flex-col">

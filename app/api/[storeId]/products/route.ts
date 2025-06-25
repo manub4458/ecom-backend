@@ -13,26 +13,28 @@ export async function POST(
     const validatedData = ProductSchema.safeParse(body);
 
     if (!validatedData.success) {
-      return new NextResponse("Invalid data provided", { status: 400 });
+      return new NextResponse(
+        JSON.stringify({ errors: validatedData.error.format() }),
+        { status: 400 }
+      );
     }
 
     const {
       name,
       slug,
-      price,
+      brand,
       about,
       description,
       sizeAndFit,
       materialAndCare,
       enabledFeatures,
+      expressDelivery,
+      warranty,
       isFeatured,
       isArchieved,
-      stock,
       categoryId,
       subCategoryId,
-      sizeId,
-      colorId,
-      productImages,
+      variants,
       specifications,
     } = validatedData.data;
 
@@ -41,7 +43,7 @@ export async function POST(
     }
 
     if (!params.storeId) {
-      return new NextResponse("Store Id is required", { status: 400 });
+      return new NextResponse("Store ID is required", { status: 400 });
     }
 
     const storeById = await db.store.findUnique({
@@ -52,6 +54,15 @@ export async function POST(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
+    // Validate category
+    const category = await db.category.findUnique({
+      where: { id: categoryId },
+    });
+    if (!category) {
+      return new NextResponse("Invalid category", { status: 400 });
+    }
+
+    // Validate subcategory if provided
     if (subCategoryId) {
       const subCategory = await db.subCategory.findUnique({
         where: { id: subCategoryId },
@@ -67,6 +78,7 @@ export async function POST(
       }
     }
 
+    // Validate specification fields if provided
     if (specifications && specifications.length > 0) {
       const specificationFieldIds = specifications.map(
         (spec) => spec.specificationFieldId
@@ -86,26 +98,64 @@ export async function POST(
       }
     }
 
+    for (const variant of variants) {
+      if (variant.sizeId) {
+        const size = await db.size.findUnique({
+          where: { id: variant.sizeId },
+        });
+        if (!size) {
+          return new NextResponse("Invalid size in variant", { status: 400 });
+        }
+      }
+      if (variant.colorId) {
+        const color = await db.color.findUnique({
+          where: { id: variant.colorId },
+        });
+        if (!color) {
+          return new NextResponse("Invalid color in variant", { status: 400 });
+        }
+      }
+      if (variant.sku) {
+        const existingVariant = await db.variant.findUnique({
+          where: { sku: variant.sku },
+        });
+        if (existingVariant) {
+          return new NextResponse(`SKU ${variant.sku} already exists`, {
+            status: 400,
+          });
+        }
+      }
+    }
+
     const product = await db.product.create({
       data: {
         name,
         slug,
-        price,
+        brand,
         about,
         description,
         sizeAndFit,
         materialAndCare,
         enabledFeatures,
+        expressDelivery,
+        warranty,
         isFeatured,
         isArchieved,
-        stock,
         categoryId,
         subCategoryId,
-        sizeId,
-        colorId,
         storeId: params.storeId,
-        productImages: {
-          create: productImages.map((url) => ({ url })),
+        variants: {
+          create: variants.map((variant) => ({
+            price: variant.price,
+            mrp: variant.mrp,
+            stock: variant.stock,
+            sku: variant.sku || undefined,
+            sizeId: variant.sizeId || undefined,
+            colorId: variant.colorId || undefined,
+            images: {
+              create: variant.images.map((url) => ({ url })),
+            },
+          })),
         },
         productSpecifications: {
           create: specifications?.map((spec) => ({
@@ -115,6 +165,11 @@ export async function POST(
         },
       },
       include: {
+        variants: {
+          include: {
+            images: true,
+          },
+        },
         productSpecifications: true,
       },
     });
@@ -123,7 +178,7 @@ export async function POST(
   } catch (error: any) {
     console.log("[PRODUCTS_POST]", error);
     if (error.code === "P2002") {
-      return new NextResponse("Slug already exists", { status: 400 });
+      return new NextResponse("Slug or SKU already exists", { status: 400 });
     }
     return new NextResponse("Internal server error", { status: 500 });
   }
@@ -135,7 +190,7 @@ export async function GET(
 ) {
   try {
     if (!params.storeId) {
-      return new NextResponse("Store Id is required", { status: 400 });
+      return new NextResponse("Store ID is required", { status: 400 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -174,9 +229,13 @@ export async function GET(
               billboard: true,
             },
           },
-          size: true,
-          color: true,
-          productImages: true,
+          variants: {
+            include: {
+              size: true,
+              color: true,
+              images: true,
+            },
+          },
           productSpecifications: {
             include: {
               specificationField: {
@@ -205,31 +264,45 @@ export async function GET(
       where.categoryId = categoryId;
     }
 
-    if (colorId) {
-      where.colorId = colorId;
-    }
-
-    if (sizeId) {
-      where.sizeId = sizeId;
+    // Filter by colorId or sizeId through variants
+    if (colorId || sizeId) {
+      where.variants = {
+        some: {
+          ...(colorId && { colorId }),
+          ...(sizeId && { sizeId }),
+        },
+      };
     }
 
     if (type) {
       where.type = type;
     }
 
+    // Filter by price through variants
     if (price) {
+      let minPrice: number | undefined;
+      let maxPrice: number | undefined;
+
       if (price === "5000") {
-        where.price = {
-          gte: 5000,
-        };
+        minPrice = 5000;
       } else {
-        const [minPrice, maxPrice] = price.split("-").map((p) => parseInt(p));
-        if (maxPrice) {
-          where.price = {
-            gte: minPrice,
-            lte: maxPrice,
-          };
+        const [min, max] = price.split("-").map((p) => parseInt(p));
+        if (max) {
+          minPrice = min;
+          maxPrice = max;
         }
+      }
+
+      if (minPrice || maxPrice) {
+        where.variants = {
+          some: {
+            ...(where.variants?.some || {}),
+            price: {
+              ...(minPrice && { gte: minPrice }),
+              ...(maxPrice && { lte: maxPrice }),
+            },
+          },
+        };
       }
     }
 
@@ -245,9 +318,13 @@ export async function GET(
             billboard: true,
           },
         },
-        size: true,
-        color: true,
-        productImages: true,
+        variants: {
+          include: {
+            size: true,
+            color: true,
+            images: true,
+          },
+        },
         productSpecifications: {
           include: {
             specificationField: {

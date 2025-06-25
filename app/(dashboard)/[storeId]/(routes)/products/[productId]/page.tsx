@@ -14,11 +14,19 @@ const ProductPage = async ({
         id: params.productId,
       },
       include: {
-        productImages: true,
-        color: true,
-        size: true,
         category: true,
-        subCategory: true,
+        subCategory: {
+          include: {
+            parent: true,
+          },
+        },
+        variants: {
+          include: {
+            size: true,
+            color: true,
+            images: true,
+          },
+        },
         productSpecifications: {
           include: {
             specificationField: {
@@ -41,6 +49,9 @@ const ProductPage = async ({
   const subCategories = await db.subCategory.findMany({
     where: {
       storeId: params.storeId,
+    },
+    include: {
+      parent: true,
     },
   });
 

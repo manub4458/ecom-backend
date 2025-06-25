@@ -6,10 +6,11 @@ import {
   Category,
   Color,
   Product,
-  ProductImage,
   Size,
   SubCategory,
   SpecificationField,
+  Variant,
+  VariantImage,
 } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -42,11 +43,12 @@ import { Input } from "@/components/ui/input";
 import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { ImageUpload } from "@/components/store/utils/image-upload";
-import { ProductSchema } from "@/schemas/product-form-schema";
+import { ProductSchema, VariantSchema } from "@/schemas/product-form-schema";
 import { Switch } from "@/components/ui/switch";
 import { ProductFeatures } from "../utils/product-features";
 import { SpecificationInput } from "../utils/specification-input";
 import Editor from "./editor";
+import VariantForm from "./variant-form";
 
 const getSubCategoryName = (
   subCategory: SubCategory,
@@ -62,7 +64,7 @@ const getSubCategoryName = (
 interface ProductFormProps {
   data:
     | (Product & {
-        productImages: ProductImage[];
+        variants: (Variant & { images: VariantImage[] })[];
         productSpecifications: {
           specificationFieldId: string;
           value: string;
@@ -100,40 +102,52 @@ export const ProductForm = ({
       ? {
           ...data,
           slug: data.slug || "",
-          sizeId: data.sizeId ?? undefined,
-          colorId: data.colorId ?? undefined,
+          brand: data.brand || "",
           categoryId: data.categoryId ?? undefined,
           subCategoryId: data.subCategoryId ?? undefined,
-          productImages: data.productImages.map((img) => img.url),
-          price: data.price || 0,
-          stock: data.stock || 0,
           about: data.about || "",
           description: data.description || "",
           materialAndCare: data.materialAndCare || [],
           sizeAndFit: data.sizeAndFit || [],
           enabledFeatures: data.enabledFeatures || [],
+          expressDelivery: data.expressDelivery || false,
+          warranty: data.warranty || "",
           isFeatured: data.isFeatured || false,
           isArchieved: data.isArchieved || false,
           specifications: data.productSpecifications || [],
+          variants: data.variants.map((v: any) => ({
+            ...v,
+            mrp: v.mrp || 0,
+            images: v.images.map((img: any) => img.url),
+          })),
         }
       : {
           name: "",
           slug: "",
-          productImages: [],
-          price: 0,
-          stock: 0,
+          brand: "",
           about: "",
           description: "",
           materialAndCare: [],
           sizeAndFit: [],
           enabledFeatures: [],
-          categoryId: "",
-          subCategoryId: undefined,
-          sizeId: undefined,
-          colorId: undefined,
+          expressDelivery: false,
+          warranty: "",
           isFeatured: false,
           isArchieved: false,
+          categoryId: "",
+          subCategoryId: undefined,
           specifications: [],
+          variants: [
+            {
+              price: 0,
+              mrp: 0,
+              stock: 0,
+              images: [],
+              sizeId: undefined,
+              colorId: undefined,
+              sku: "",
+            },
+          ],
         },
   });
 
@@ -163,7 +177,7 @@ export const ProductForm = ({
       console.log(error);
       if (
         error.response?.status === 400 &&
-        error.response?.data === "Slug already exists"
+        error.response?.data === "Slug or SKU already exists"
       ) {
         form.setError("slug", {
           type: "manual",
@@ -237,8 +251,24 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-
-            {/* <FormField
+            <FormField
+              control={form.control}
+              name="brand"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Brand</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Product brand"
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
               control={form.control}
               name="about"
               render={({ field }) => (
@@ -254,8 +284,7 @@ export const ProductForm = ({
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
-            /> */}
-
+            />
             <FormField
               control={form.control}
               name="slug"
@@ -277,64 +306,7 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Description</FormLabel>
-                  <FormControl>
-                    <Editor
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={loading}
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Price</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="Enter the price in INR"
-                      type="number"
-                      onChange={(e) =>
-                        field.onChange(parseFloat(e.target.value))
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
 
-            <FormField
-              control={form.control}
-              name="stock"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Stock</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="No of stocks available"
-                      type="number"
-                      onChange={(e) => field.onChange(parseInt(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="categoryId"
@@ -363,6 +335,23 @@ export const ProductForm = ({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Description</FormLabel>
+                  <FormControl>
+                    <Editor
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={loading}
+                    />
+                  </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
@@ -409,72 +398,42 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
-              name="colorId"
+              name="warranty"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Color</FormLabel>
-                  <Select
-                    disabled={loading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          defaultValue={field.value}
-                          placeholder="Select a color"
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {colors.map((color) => (
-                        <SelectItem key={color.id} value={color.id}>
-                          <div className="flex items-center gap-x-4 w-full">
-                            <div
-                              className="h-4 w-4 rounded-full"
-                              style={{ backgroundColor: color.value }}
-                            />
-                            {color.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Warranty</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Warranty information (e.g., 1 year)"
+                    />
+                  </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
             />
+            <br />
             <FormField
               control={form.control}
-              name="sizeId"
+              name="expressDelivery"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Size</FormLabel>
-                  <Select
-                    disabled={loading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          defaultValue={field.value}
-                          placeholder="Select a size"
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {sizes.map((size) => (
-                        <SelectItem key={size.id} value={size.id}>
-                          {size.value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Express Delivery</FormLabel>
+                    <FormDescription>
+                      Enable express delivery for this product
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
@@ -488,6 +447,27 @@ export const ProductForm = ({
                     <FormLabel>Featured</FormLabel>
                     <FormDescription>
                       This product will appear on the home page
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isArchieved"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Archieved</FormLabel>
+                    <FormDescription>
+                      This product will not be visible to customers
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -593,20 +573,16 @@ export const ProductForm = ({
           />
           <FormField
             control={form.control}
-            name="productImages"
+            name="variants"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Images</FormLabel>
+                <FormLabel>Variants</FormLabel>
                 <FormControl>
-                  <ImageUpload
+                  <VariantForm
                     value={field.value}
-                    disabled={loading}
-                    onChange={(url) => field.onChange([...field.value, url])}
-                    onRemove={(url) =>
-                      field.onChange(
-                        field.value.filter((current) => current !== url)
-                      )
-                    }
+                    onChange={field.onChange}
+                    sizes={sizes}
+                    colors={colors}
                   />
                 </FormControl>
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
