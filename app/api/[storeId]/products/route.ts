@@ -22,11 +22,14 @@ export async function POST(
     const {
       name,
       slug,
+      brand,
       about,
       description,
       sizeAndFit,
       materialAndCare,
       enabledFeatures,
+      expressDelivery,
+      warranty,
       isFeatured,
       isArchieved,
       categoryId,
@@ -95,7 +98,6 @@ export async function POST(
       }
     }
 
-    // Validate variants (sizeId and colorId if provided)
     for (const variant of variants) {
       if (variant.sizeId) {
         const size = await db.size.findUnique({
@@ -129,11 +131,14 @@ export async function POST(
       data: {
         name,
         slug,
+        brand,
         about,
         description,
         sizeAndFit,
         materialAndCare,
         enabledFeatures,
+        expressDelivery,
+        warranty,
         isFeatured,
         isArchieved,
         categoryId,
@@ -142,6 +147,7 @@ export async function POST(
         variants: {
           create: variants.map((variant) => ({
             price: variant.price,
+            mrp: variant.mrp,
             stock: variant.stock,
             sku: variant.sku || undefined,
             sizeId: variant.sizeId || undefined,

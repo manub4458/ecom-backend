@@ -22,11 +22,14 @@ export async function PATCH(
     const {
       name,
       slug,
+      brand,
       about,
       description,
       sizeAndFit,
       materialAndCare,
       enabledFeatures,
+      expressDelivery,
+      warranty,
       isFeatured,
       isArchieved,
       categoryId,
@@ -138,11 +141,14 @@ export async function PATCH(
       data: {
         name,
         slug,
+        brand,
         about,
         description,
         sizeAndFit,
         materialAndCare,
         enabledFeatures,
+        expressDelivery,
+        warranty,
         isFeatured,
         isArchieved,
         categoryId,
@@ -159,6 +165,7 @@ export async function PATCH(
             where: { id: variant.id || "non-existent-id" }, // Use id if provided
             update: {
               price: variant.price,
+              mrp: variant.mrp,
               stock: variant.stock,
               sku: variant.sku || undefined,
               sizeId: variant.sizeId || undefined,
@@ -170,6 +177,7 @@ export async function PATCH(
             },
             create: {
               price: variant.price,
+              mrp: variant.mrp,
               stock: variant.stock,
               sku: variant.sku || undefined,
               sizeId: variant.sizeId || undefined,
@@ -233,13 +241,28 @@ export async function DELETE(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    const product = await db.product.delete({
-      where: { id: params.productId },
+    // Delete the product and its related data within a transaction
+    const product = await db.$transaction(async (prisma) => {
+      // Delete product specifications
+      await prisma.productSpecification.deleteMany({
+        where: { productId: params.productId },
+      });
+
+      // Delete the product (variants and order items will cascade)
+      return await prisma.product.delete({
+        where: { id: params.productId },
+      });
     });
 
     return NextResponse.json(product);
-  } catch (error) {
+  } catch (error: any) {
     console.log("[PRODUCT_DELETE]", error);
+    if (error.code === "P2023") {
+      return new NextResponse("Invalid product ID", { status: 400 });
+    }
+    if (error.code === "P2025") {
+      return new NextResponse("Product not found", { status: 404 });
+    }
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

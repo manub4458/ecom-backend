@@ -21,6 +21,7 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
       ...value,
       {
         price: 0,
+        mrp: 0,
         stock: 0,
         images: [],
         sizeId: undefined,
@@ -72,7 +73,7 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
                 <option value="">Select size</option>
                 {sizes.map((size) => (
                   <option key={size.id} value={size.id}>
-                    {size.value} {/* e.g., "128GB", "1.5 Tons" */}
+                    {size.value}
                   </option>
                 ))}
               </select>
@@ -90,20 +91,37 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
                 <option value="">Select color</option>
                 {colors.map((color) => (
                   <option key={color.id} value={color.id}>
-                    {color.name} {/* e.g., "Black", "Silver" */}
+                    {color.name}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Price</label>
+              <label className="block text-sm font-medium mb-1">
+                Price (INR)
+              </label>
               <Input
                 type="number"
                 value={variant.price}
                 onChange={(e) =>
                   updateVariant(index, { price: Number(e.target.value) })
                 }
+                placeholder="Enter price"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                MRP (INR)
+              </label>
+              <Input
+                type="number"
+                value={variant.mrp}
+                onChange={(e) =>
+                  updateVariant(index, { mrp: Number(e.target.value) })
+                }
+                placeholder="Enter MRP"
               />
             </div>
 
@@ -115,14 +133,16 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
                 onChange={(e) =>
                   updateVariant(index, { stock: Number(e.target.value) })
                 }
+                placeholder="Enter stock"
               />
             </div>
 
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium mb-1">SKU</label>
               <Input
                 value={variant.sku || ""}
                 onChange={(e) => updateVariant(index, { sku: e.target.value })}
+                placeholder="Enter SKU"
               />
             </div>
 
