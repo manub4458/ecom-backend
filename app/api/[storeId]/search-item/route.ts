@@ -8,7 +8,9 @@ export async function GET(
   // Set CORS headers
   const headers = {
     "Access-Control-Allow-Origin":
-      process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000",
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "http://localhost:3000" ||
+      "https://favobliss.vercel.app",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
