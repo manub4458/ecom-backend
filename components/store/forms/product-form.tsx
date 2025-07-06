@@ -251,7 +251,7 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="brand"
               render={({ field }) => (
@@ -267,7 +267,7 @@ export const ProductForm = ({
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
-            />
+            /> */}
             <FormField
               control={form.control}
               name="about"
