@@ -15,12 +15,14 @@ export async function GET(
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
     const timeFrame = searchParams.get("timeFrame") || "30 days";
+    const pincode = searchParams.get("pincode");
 
     console.log("Received filters:", {
       categoryId,
       page,
       limit,
       timeFrame,
+      pincode,
     });
 
     // Calculate start date based on time frame
@@ -35,6 +37,22 @@ export async function GET(
       return new NextResponse("Invalid time frame", { status: 400 });
     }
 
+    // Find location based on pincode and storeId
+    let location = null;
+    if (pincode) {
+      location = await db.location.findFirst({
+        where: {
+          storeId: params.storeId,
+          pincode,
+        },
+      });
+      if (!location) {
+        console.log(`No location found for pincode: ${pincode}`);
+        // Optionally, return an error or proceed with default pricing
+        // return new NextResponse("Invalid pincode", { status: 400 });
+      }
+    }
+
     // Filter for orders
     const whereOrder: any = {
       storeId: params.storeId,
@@ -45,7 +63,7 @@ export async function GET(
       whereOrder.createdAt = { gte: startDate };
     }
 
-    // Get relevant order IDs first
+    // Get relevant order IDs
     const orders = await db.order.findMany({
       where: whereOrder,
       select: { id: true },
@@ -106,7 +124,7 @@ export async function GET(
       return NextResponse.json([]);
     }
 
-    // Fetch product details
+    // Fetch product details with variantPrices
     const products = await db.product.findMany({
       where: {
         id: { in: productIds },
@@ -121,13 +139,12 @@ export async function GET(
             billboard: true,
           },
         },
-        // size: true,
-        // color: true,
         variants: {
           include: {
             size: true,
             color: true,
             images: true,
+            variantPrices: true, // Include variantPrices
           },
         },
         productSpecifications: {
@@ -142,11 +159,38 @@ export async function GET(
       },
     });
 
-    // Combine sales data with product details
+    // Combine sales data with product details and add location-based price
     const result = paginatedProducts
       .map((item) => {
         const product = products.find((p) => p.id === item.productId);
-        return product ? { ...product, totalSold: item.totalSold } : null;
+        if (!product) return null;
+
+        // Map variants to include price based on location
+        const updatedVariants = product.variants.map((variant) => {
+          let price = 0;
+          if (location && variant.variantPrices.length > 0) {
+            // Find price for the specific location
+            const variantPrice = variant.variantPrices.find(
+              (vp) => vp.locationId === location.id
+            );
+            price = variantPrice
+              ? variantPrice.price
+              : variant.variantPrices[0]?.price || 0;
+          } else {
+            // Fallback to first variantPrice or 0
+            price = variant.variantPrices[0]?.price || 0;
+          }
+          return {
+            ...variant,
+            price, // Add price field to variant
+          };
+        });
+
+        return {
+          ...product,
+          totalSold: item.totalSold,
+          variants: updatedVariants,
+        };
       })
       .filter(Boolean);
 
