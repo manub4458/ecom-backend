@@ -11,6 +11,7 @@ import {
   SpecificationField,
   Variant,
   VariantImage,
+  Location,
 } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -43,7 +44,7 @@ import { Input } from "@/components/ui/input";
 import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { ImageUpload } from "@/components/store/utils/image-upload";
-import { ProductSchema, VariantSchema } from "@/schemas/product-form-schema";
+import { ProductSchema } from "@/schemas/product-form-schema";
 import { Switch } from "@/components/ui/switch";
 import { ProductFeatures } from "../utils/product-features";
 import { SpecificationInput } from "../utils/specification-input";
@@ -64,7 +65,10 @@ const getSubCategoryName = (
 interface ProductFormProps {
   data:
     | (Product & {
-        variants: (Variant & { images: VariantImage[] })[];
+        variants: (Variant & {
+          images: VariantImage[];
+          variantPrices: { locationId: string; price: number; mrp: number }[];
+        })[];
         productSpecifications: {
           specificationFieldId: string;
           value: string;
@@ -76,6 +80,7 @@ interface ProductFormProps {
   sizes: Size[];
   colors: Color[];
   specificationFields: (SpecificationField & { group: { name: string } })[];
+  locations: Location[];
 }
 
 export const ProductForm = ({
@@ -85,6 +90,7 @@ export const ProductForm = ({
   sizes,
   colors,
   specificationFields,
+  locations,
 }: ProductFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -113,12 +119,13 @@ export const ProductForm = ({
           expressDelivery: data.expressDelivery || false,
           warranty: data.warranty || "",
           isFeatured: data.isFeatured || false,
+          isNewArrival: data.isNewArrival || false,
           isArchieved: data.isArchieved || false,
           specifications: data.productSpecifications || [],
           variants: data.variants.map((v: any) => ({
             ...v,
-            mrp: v.mrp || 0,
             images: v.images.map((img: any) => img.url),
+            variantPrices: v.variantPrices || [],
           })),
         }
       : {
@@ -133,19 +140,19 @@ export const ProductForm = ({
           expressDelivery: false,
           warranty: "",
           isFeatured: false,
+          isNewArrival: false,
           isArchieved: false,
           categoryId: "",
           subCategoryId: undefined,
           specifications: [],
           variants: [
             {
-              price: 0,
-              mrp: 0,
               stock: 0,
               images: [],
               sizeId: undefined,
               colorId: undefined,
               sku: "",
+              variantPrices: [],
             },
           ],
         },
@@ -251,23 +258,6 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-            {/* <FormField
-              control={form.control}
-              name="brand"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Brand</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="Product brand"
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            /> */}
             <FormField
               control={form.control}
               name="about"
@@ -306,7 +296,6 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="categoryId"
@@ -398,7 +387,6 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="warranty"
@@ -416,7 +404,6 @@ export const ProductForm = ({
                 </FormItem>
               )}
             />
-            <br />
             <FormField
               control={form.control}
               name="expressDelivery"
@@ -426,6 +413,27 @@ export const ProductForm = ({
                     <FormLabel>Express Delivery</FormLabel>
                     <FormDescription>
                       Enable express delivery for this product
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isNewArrival"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>New Arrival</FormLabel>
+                    <FormDescription>
+                      This product will be marked as a new arrival
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -583,6 +591,7 @@ export const ProductForm = ({
                     onChange={field.onChange}
                     sizes={sizes}
                     colors={colors}
+                    locations={locations}
                   />
                 </FormControl>
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />

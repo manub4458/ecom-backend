@@ -21,16 +21,27 @@ export async function POST(
     const {
       products,
       orderId,
-    }: { products: { id: string; quantity: number }[]; orderId: string } =
-      await request.json();
+    }: {
+      products: {
+        id: string;
+        quantity: number;
+        price: number;
+        locationId?: string | null;
+      }[];
+      orderId: string;
+    } = await request.json();
 
     if (!products || products.length === 0) {
       return new NextResponse("Variant IDs are required", { status: 400 });
     }
 
+    if (!orderId) {
+      return new NextResponse("Order ID is required", { status: 400 });
+    }
+
     const variantIds = products.map((product) => product.id);
 
-    // Fetch variants instead of products
+    // Fetch variants for validation
     const allVariants = await db.variant.findMany({
       where: {
         id: {
@@ -38,7 +49,7 @@ export async function POST(
         },
       },
       include: {
-        product: true, // Include product for name/about
+        product: true,
         size: true,
         color: true,
       },
@@ -60,39 +71,32 @@ export async function POST(
       }
     }
 
-    const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID!,
-      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    // Calculate line items using location-based price from products
+    const lineItems = products.map((product) => {
+      const variant = allVariants.find((v) => v.id === product.id);
+      return {
+        quantity: product.quantity,
+        amount: product.price * 100, // Convert price to paise
+        name: `${variant?.product.name} (${variant?.size?.value || ""}, ${
+          variant?.color?.name || ""
+        })`,
+      };
     });
-
-    const lineItems = allVariants.map((variant) => ({
-      quantity: products.find((p) => p.id === variant.id)?.quantity || 1,
-      amount: variant.price * 100, // Razorpay expects amount in paise
-      name: `${variant.product.name} (${variant.size?.value || ""}, ${
-        variant.color?.name || ""
-      })`,
-    }));
 
     const totalAmount = lineItems.reduce(
       (total, item) => total + item.amount * item.quantity,
       0
     );
 
-    const order = await db.order.create({
-      data: {
-        storeId: params.storeId,
-        isPaid: false,
-        orderItems: {
-          create: products.map((product) => ({
-            variant: {
-              connect: {
-                id: product.id, // Connect variantId
-              },
-            },
-            quantity: product.quantity,
-          })),
-        },
-      },
+    if (totalAmount <= 0) {
+      return new NextResponse("Total amount must be greater than zero", {
+        status: 400,
+      });
+    }
+
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
     });
 
     const razorCheckout = await razorpay.orders.create({
@@ -100,7 +104,8 @@ export async function POST(
       currency: "INR",
       receipt: orderId,
       notes: {
-        id: order.id,
+        id: orderId,
+        locationIds: JSON.stringify(products.map((p) => p.locationId)), // Include locationIds
       },
     });
 

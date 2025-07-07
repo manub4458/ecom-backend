@@ -25,6 +25,11 @@ const ProductPage = async ({
             size: true,
             color: true,
             images: true,
+            variantPrices: {
+              include: {
+                location: true,
+              },
+            },
           },
         },
         productSpecifications: {
@@ -76,6 +81,12 @@ const ProductPage = async ({
     },
   });
 
+  const locations = await db.location.findMany({
+    where: {
+      storeId: params.storeId,
+    },
+  });
+
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
@@ -86,6 +97,7 @@ const ProductPage = async ({
           sizes={sizes}
           colors={colors}
           specificationFields={specificationFields}
+          locations={locations}
         />
       </div>
     </div>

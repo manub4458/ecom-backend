@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { format } from "date-fns";
 import { db } from "@/lib/db";
-import { ColumnDef } from "@tanstack/react-table";
 
 import { ProductColumn } from "@/components/store/utils/columns";
 import { ProductClient } from "@/components/store/utils/product-client";
@@ -35,6 +34,11 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
           size: true,
           color: true,
           images: true,
+          variantPrices: {
+            include: {
+              location: true,
+            },
+          },
         },
       },
       productSpecifications: {
@@ -61,9 +65,19 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     },
   });
 
+  // Fetch the first location for price display (or adjust to use a specific location)
+  const defaultLocation = await db.location.findFirst({
+    where: {
+      storeId: params.storeId,
+    },
+  });
+
   const formattedProducts: ProductColumn[] = products.map((product) => {
     const firstVariant = product.variants[0];
-    const price = firstVariant?.price?.toString() || "N/A";
+    const firstPrice = firstVariant?.variantPrices.find(
+      (vp) => vp.locationId === defaultLocation?.id
+    );
+    const price = firstPrice?.price?.toString() || "N/A";
     const stock = firstVariant?.stock || 0;
     const size = firstVariant?.size?.value || "None";
     const color = firstVariant?.color?.name || "None";
@@ -72,6 +86,7 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
       id: product.id,
       name: product.name,
       isFeatured: product.isFeatured,
+      isNewArrival: product.isNewArrival,
       isArchieved: product.isArchieved,
       price,
       stock,

@@ -20,6 +20,7 @@ export const getTotalRevenue = async (storeId: string) => {
             variant: {
               include: {
                 product: true,
+                variantPrices: true, // Include variantPrices
               },
             },
           },
@@ -28,14 +29,17 @@ export const getTotalRevenue = async (storeId: string) => {
     });
 
     const totalRevenue = paidOrders.reduce((total, order) => {
-      const orderTotal = order.orderItems.reduce((orderSum, item) => {
-        return orderSum + item.quantity * item.variant.price;
+      const orderTotal = order.orderItems.reduce((orderSum: number, item) => {
+        // Use the first variantPrice's price, or fallback to 0
+        const price = item.variant.variantPrices[0]?.price || 0;
+        return orderSum + item.quantity * price;
       }, 0);
       return total + orderTotal;
     }, 0);
 
     return totalRevenue;
   } catch (error) {
+    console.error("[GET_TOTAL_REVENUE]", error);
     return 0;
   }
 };
@@ -50,6 +54,7 @@ export const getSalesCount = async (storeId: string) => {
     });
     return totalSales;
   } catch (error) {
+    console.error("[GET_SALES_COUNT]", error);
     return 0;
   }
 };
@@ -69,6 +74,7 @@ export const getProductsInStock = async (storeId: string) => {
     });
     return productsWithStock.length;
   } catch (error) {
+    console.error("[GET_PRODUCTS_IN_STOCK]", error);
     return 0;
   }
 };
@@ -83,7 +89,11 @@ export const getGraphRevenue = async (storeId: string) => {
       include: {
         orderItems: {
           include: {
-            variant: true,
+            variant: {
+              include: {
+                variantPrices: true, // Include variantPrices
+              },
+            },
           },
         },
       },
@@ -96,7 +106,9 @@ export const getGraphRevenue = async (storeId: string) => {
       let revenueForOrder = 0;
 
       for (const item of order.orderItems) {
-        revenueForOrder += item.quantity * item.variant.price;
+        // Use the first variantPrice's price, or fallback to 0
+        const price = item.variant.variantPrices[0]?.price || 0;
+        revenueForOrder += item.quantity * price;
       }
 
       monthlyRevenue[month] = (monthlyRevenue[month] || 0) + revenueForOrder;
@@ -123,6 +135,7 @@ export const getGraphRevenue = async (storeId: string) => {
 
     return graphData;
   } catch (error) {
+    console.error("[GET_GRAPH_REVENUE]", error);
     return [];
   }
 };

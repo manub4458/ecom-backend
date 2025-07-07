@@ -1,14 +1,30 @@
 import * as z from "zod";
 
+// product-form-schema.ts
 export const VariantSchema = z.object({
   id: z.string().optional(),
-  sizeId: z.string().optional(),
-  colorId: z.string().optional(),
-  price: z.number().min(0, "Price must be non-negative"),
-  mrp: z.number().min(0, "MRP must be non-negative").default(0),
+  sizeId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val === "" ? null : val)), // Convert empty string to null
+  colorId: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val === "" ? null : val)), // Convert empty string to null
   stock: z.number().min(0, "Stock must be non-negative"),
   images: z.array(z.string().url()).min(1, "At least one image is required"),
   sku: z.string().optional(),
+  variantPrices: z
+    .array(
+      z.object({
+        locationId: z.string().min(1, "Location is required"),
+        price: z.number().min(0, "Price must be non-negative"),
+        mrp: z.number().min(0, "MRP must be non-negative"),
+      })
+    )
+    .min(1, "At least one price per location is required"),
 });
 
 export const ProductSchema = z.object({
@@ -30,6 +46,7 @@ export const ProductSchema = z.object({
   expressDelivery: z.boolean().default(false),
   warranty: z.string().optional(),
   isFeatured: z.boolean().default(false),
+  isNewArrival: z.boolean().default(false),
   isArchieved: z.boolean().default(false),
   categoryId: z.string().min(1, "Category is required"),
   subCategoryId: z.string().optional(),

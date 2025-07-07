@@ -31,6 +31,7 @@ export async function PATCH(
       expressDelivery,
       warranty,
       isFeatured,
+      isNewArrival,
       isArchieved,
       categoryId,
       subCategoryId,
@@ -102,9 +103,9 @@ export async function PATCH(
       }
     }
 
-    // Validate variants
+    // Validate variants and their prices
     for (const variant of variants) {
-      if (variant.sizeId) {
+      if (variant.sizeId !== null && variant.sizeId) {
         const size = await db.size.findUnique({
           where: { id: variant.sizeId },
         });
@@ -112,7 +113,7 @@ export async function PATCH(
           return new NextResponse("Invalid size in variant", { status: 400 });
         }
       }
-      if (variant.colorId) {
+      if (variant.colorId !== null && variant.colorId) {
         const color = await db.color.findUnique({
           where: { id: variant.colorId },
         });
@@ -133,6 +134,22 @@ export async function PATCH(
           });
         }
       }
+      // Validate variant prices
+      if (variant.variantPrices && variant.variantPrices.length > 0) {
+        const locationIds = variant.variantPrices.map((vp) => vp.locationId);
+        const locations = await db.location.findMany({
+          where: {
+            id: { in: locationIds },
+            storeId: params.storeId,
+          },
+        });
+        if (locations.length !== locationIds.length) {
+          return new NextResponse(
+            "One or more location IDs in variant prices are invalid",
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Update product
@@ -150,6 +167,7 @@ export async function PATCH(
         expressDelivery,
         warranty,
         isFeatured,
+        isNewArrival,
         isArchieved,
         categoryId,
         subCategoryId,
@@ -164,26 +182,37 @@ export async function PATCH(
           upsert: variants.map((variant) => ({
             where: { id: variant.id || "non-existent-id" }, // Use id if provided
             update: {
-              price: variant.price,
-              mrp: variant.mrp,
               stock: variant.stock,
               sku: variant.sku || undefined,
-              sizeId: variant.sizeId || undefined,
-              colorId: variant.colorId || undefined,
+              sizeId: variant.sizeId === null ? null : variant.sizeId,
+              colorId: variant.colorId === null ? null : variant.colorId,
               images: {
                 deleteMany: {},
                 create: variant.images.map((url) => ({ url })),
               },
+              variantPrices: {
+                deleteMany: {},
+                create: variant.variantPrices?.map((vp) => ({
+                  locationId: vp.locationId,
+                  price: vp.price,
+                  mrp: vp.mrp,
+                })),
+              },
             },
             create: {
-              price: variant.price,
-              mrp: variant.mrp,
               stock: variant.stock,
               sku: variant.sku || undefined,
-              sizeId: variant.sizeId || undefined,
-              colorId: variant.colorId || undefined,
+              sizeId: variant.sizeId === null ? null : variant.sizeId,
+              colorId: variant.colorId === null ? null : variant.colorId,
               images: {
                 create: variant.images.map((url) => ({ url })),
+              },
+              variantPrices: {
+                create: variant.variantPrices?.map((vp) => ({
+                  locationId: vp.locationId,
+                  price: vp.price,
+                  mrp: vp.mrp,
+                })),
               },
             },
           })),
@@ -198,6 +227,11 @@ export async function PATCH(
         variants: {
           include: {
             images: true,
+            variantPrices: {
+              include: {
+                location: true,
+              },
+            },
           },
         },
         productSpecifications: true,
@@ -279,6 +313,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const includeRelated = searchParams.get("includeRelated") === "true";
     const categoryId = searchParams.get("categoryId");
+    const locationId = searchParams.get("locationId");
 
     const product = await db.product.findUnique({
       where: {
@@ -298,6 +333,12 @@ export async function GET(
             size: true,
             color: true,
             images: true,
+            variantPrices: {
+              where: locationId ? { locationId } : undefined,
+              include: {
+                location: true,
+              },
+            },
           },
         },
         productSpecifications: {
@@ -337,6 +378,12 @@ export async function GET(
               size: true,
               color: true,
               images: true,
+              variantPrices: {
+                where: locationId ? { locationId } : undefined,
+                include: {
+                  location: true,
+                },
+              },
             },
           },
           productSpecifications: {

@@ -60,6 +60,11 @@ export const SubNav = ({
         active: pathname === `/${params.storeId}/orders`,
       },
       {
+        href: `/${params.storeId}/location`,
+        label: "Locations",
+        active: pathname === `/${params.storeId}/location`,
+      },
+      {
         href: `/${params.storeId}/billboards`,
         label: "Billboards",
         active: pathname === `/${params.storeId}/billboards`,

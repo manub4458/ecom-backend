@@ -118,6 +118,38 @@ export const sizeColumns: ColumnDef<SizeColumn>[] = [
   },
 ];
 
+export type LocationColumn = {
+  id: string;
+  pincode: string;
+  city: string;
+  state: string;
+  country: string;
+  createdAt: string;
+};
+
+export const locationColumns: ColumnDef<LocationColumn>[] = [
+  {
+    accessorKey: "pincode",
+    header: "Pincode",
+  },
+  {
+    accessorKey: "city",
+    header: "City",
+  },
+  {
+    accessorKey: "state",
+    header: "State",
+  },
+  {
+    accessorKey: "country",
+    header: "Country",
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created At",
+  },
+];
+
 export type ColorColumn = {
   id: string;
   name: string;

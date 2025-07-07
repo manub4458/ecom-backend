@@ -67,8 +67,39 @@ model Store {
   orders              Order[]              @relation("StoreToOrder")
   specificationGroups SpecificationGroup[] @relation("StoreToSpecificationGroup")
   specificationFields SpecificationField[] @relation("StoreToSpecificationField")
+  locations           Location[]           @relation("StoreToLocation")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+}
+
+model Location {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  storeId       String         @db.ObjectId
+  store         Store          @relation("StoreToLocation", fields: [storeId], references: [id], onDelete: Cascade)
+  pincode       String
+  city          String
+  state         String
+  country       String
+  variantPrices VariantPrice[] @relation("LocationToVariantPrice")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([storeId, pincode, city, state, country])
+  @@index([storeId])
+}
+
+model VariantPrice {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  variantId  String   @db.ObjectId
+  variant    Variant  @relation("VariantToVariantPrice", fields: [variantId], references: [id], onDelete: Cascade)
+  locationId String   @db.ObjectId
+  location   Location @relation("LocationToVariantPrice", fields: [locationId], references: [id], onDelete: Cascade)
+  price      Int      @default(0)
+  mrp        Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([variantId, locationId])
 }
 
 model SpecificationGroup {
@@ -208,6 +239,7 @@ model Product {
   warranty              String?
   isFeatured            Boolean                @default(false)
   isArchieved           Boolean                @default(false)
+  isNewArrival          Boolean                @default(false)
   productSpecifications ProductSpecification[] @relation("ProductToProductSpecification")
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
@@ -244,21 +276,20 @@ model OrderItem {
 }
 
 model Variant {
-  id        String         @id @default(auto()) @map("_id") @db.ObjectId
-  productId String         @db.ObjectId
-  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sizeId    String?        @db.ObjectId
-  size      Size?          @relation(fields: [sizeId], references: [id], onDelete: SetNull)
-  colorId   String?        @db.ObjectId
-  color     Color?         @relation(fields: [colorId], references: [id], onDelete: SetNull)
-  price     Int            @default(0)
-  mrp       Int            @default(0)
-  stock     Int            @default(0)
-  images    VariantImage[]
-  sku       String?        @unique
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  OrderItem OrderItem[]
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  productId     String         @db.ObjectId
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sizeId        String?        @db.ObjectId
+  size          Size?          @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  colorId       String?        @db.ObjectId
+  color         Color?         @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  stock         Int            @default(0)
+  images        VariantImage[]
+  sku           String?        @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  OrderItem     OrderItem[]
+  variantPrices VariantPrice[] @relation("VariantToVariantPrice")
 
   @@index([productId, sizeId, colorId])
 }

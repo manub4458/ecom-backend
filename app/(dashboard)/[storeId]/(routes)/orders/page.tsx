@@ -23,6 +23,7 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
               product: true,
               size: true,
               color: true,
+              variantPrices: true, // Include variantPrices
             },
           },
         },
@@ -65,7 +66,9 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
           .join(", "),
         totalPrice: formatter.format(
           validOrderItems.reduce((total, item) => {
-            return total + item.variant.price * item.quantity;
+            // Use the first variantPrice's price, or fallback to 0
+            const price = item.variant.variantPrices[0]?.price || 0;
+            return total + price * item.quantity;
           }, 0)
         ),
         createdAt: format(item.createdAt, "MMMM do, yyyy"),

@@ -31,6 +31,7 @@ export async function POST(
       expressDelivery,
       warranty,
       isFeatured,
+      isNewArrival,
       isArchieved,
       categoryId,
       subCategoryId,
@@ -98,8 +99,9 @@ export async function POST(
       }
     }
 
+    // Validate variants and their prices
     for (const variant of variants) {
-      if (variant.sizeId) {
+      if (variant.sizeId !== null && variant.sizeId) {
         const size = await db.size.findUnique({
           where: { id: variant.sizeId },
         });
@@ -107,7 +109,7 @@ export async function POST(
           return new NextResponse("Invalid size in variant", { status: 400 });
         }
       }
-      if (variant.colorId) {
+      if (variant.colorId !== null && variant.colorId) {
         const color = await db.color.findUnique({
           where: { id: variant.colorId },
         });
@@ -125,6 +127,22 @@ export async function POST(
           });
         }
       }
+      // Validate variant prices
+      if (variant.variantPrices && variant.variantPrices.length > 0) {
+        const locationIds = variant.variantPrices.map((vp) => vp.locationId);
+        const locations = await db.location.findMany({
+          where: {
+            id: { in: locationIds },
+            storeId: params.storeId,
+          },
+        });
+        if (locations.length !== locationIds.length) {
+          return new NextResponse(
+            "One or more location IDs in variant prices are invalid",
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const product = await db.product.create({
@@ -140,20 +158,26 @@ export async function POST(
         expressDelivery,
         warranty,
         isFeatured,
+        isNewArrival,
         isArchieved,
         categoryId,
         subCategoryId,
         storeId: params.storeId,
         variants: {
           create: variants.map((variant) => ({
-            price: variant.price,
-            mrp: variant.mrp,
             stock: variant.stock,
             sku: variant.sku || undefined,
-            sizeId: variant.sizeId || undefined,
-            colorId: variant.colorId || undefined,
+            sizeId: variant.sizeId === null ? null : variant.sizeId,
+            colorId: variant.colorId === null ? null : variant.colorId,
             images: {
               create: variant.images.map((url) => ({ url })),
+            },
+            variantPrices: {
+              create: variant.variantPrices?.map((vp) => ({
+                locationId: vp.locationId,
+                price: vp.price,
+                mrp: vp.mrp,
+              })),
             },
           })),
         },
@@ -168,6 +192,11 @@ export async function POST(
         variants: {
           include: {
             images: true,
+            variantPrices: {
+              include: {
+                location: true,
+              },
+            },
           },
         },
         productSpecifications: true,
@@ -202,6 +231,7 @@ export async function GET(
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
     const price = searchParams.get("price");
+    const locationId = searchParams.get("locationId");
 
     console.log("Received filters:", {
       slug,
@@ -212,6 +242,7 @@ export async function GET(
       page,
       limit,
       price,
+      locationId,
     });
 
     if (slug) {
@@ -234,6 +265,12 @@ export async function GET(
               size: true,
               color: true,
               images: true,
+              variantPrices: {
+                where: locationId ? { locationId } : undefined,
+                include: {
+                  location: true,
+                },
+              },
             },
           },
           productSpecifications: {
@@ -278,8 +315,8 @@ export async function GET(
       where.type = type;
     }
 
-    // Filter by price through variants
-    if (price) {
+    // Filter by price through variantPrices
+    if (price && locationId) {
       let minPrice: number | undefined;
       let maxPrice: number | undefined;
 
@@ -297,9 +334,14 @@ export async function GET(
         where.variants = {
           some: {
             ...(where.variants?.some || {}),
-            price: {
-              ...(minPrice && { gte: minPrice }),
-              ...(maxPrice && { lte: maxPrice }),
+            variantPrices: {
+              some: {
+                locationId,
+                price: {
+                  ...(minPrice && { gte: minPrice }),
+                  ...(maxPrice && { lte: maxPrice }),
+                },
+              },
             },
           },
         };
@@ -323,6 +365,12 @@ export async function GET(
             size: true,
             color: true,
             images: true,
+            variantPrices: {
+              where: locationId ? { locationId } : undefined,
+              include: {
+                location: true,
+              },
+            },
           },
         },
         productSpecifications: {

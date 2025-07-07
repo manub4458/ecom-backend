@@ -1,60 +1,118 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { Size, Color, Location } from "@prisma/client";
 import { Trash2 } from "lucide-react";
-import { ImageUpload } from "../utils/image-upload";
-import { Color, Size } from "@prisma/client";
-import * as z from "zod";
-import { VariantSchema } from "@/schemas/product-form-schema";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ImageUpload } from "@/components/store/utils/image-upload";
 
 interface VariantFormProps {
-  value: z.infer<typeof VariantSchema>[];
-  onChange: (value: z.infer<typeof VariantSchema>[]) => void;
+  value: Array<{
+    id?: string;
+    sizeId?: string | null;
+    colorId?: string | null;
+    stock: number;
+    images: string[];
+    sku?: string;
+    variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
+  }>;
+  onChange: (
+    value: Array<{
+      id?: string;
+      sizeId?: string | null;
+      colorId?: string | null;
+      stock: number;
+      images: string[];
+      sku?: string;
+      variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
+    }>
+  ) => void;
   sizes: Size[];
   colors: Color[];
+  locations: Location[];
 }
 
-const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
+export default function VariantForm({
+  value,
+  onChange,
+  sizes,
+  colors,
+  locations,
+}: VariantFormProps) {
+  const [loading, setLoading] = useState(false);
+
   const addVariant = () => {
     onChange([
       ...value,
       {
-        price: 0,
-        mrp: 0,
         stock: 0,
         images: [],
-        sizeId: undefined,
-        colorId: undefined,
         sku: "",
+        sizeId: null,
+        colorId: null,
+        variantPrices: [],
       },
     ]);
-  };
-
-  const updateVariant = (
-    index: number,
-    data: Partial<z.infer<typeof VariantSchema>>
-  ) => {
-    const updated = [...value];
-    updated[index] = { ...updated[index], ...data };
-    onChange(updated);
   };
 
   const removeVariant = (index: number) => {
     onChange(value.filter((_, i) => i !== index));
   };
 
+  const updateVariant = (index: number, updatedVariant: any) => {
+    const newVariants = [...value];
+    newVariants[index] = { ...newVariants[index], ...updatedVariant };
+    onChange(newVariants);
+  };
+
+  const addPrice = (variantIndex: number) => {
+    const newVariants = [...value];
+    newVariants[variantIndex].variantPrices.push({
+      locationId: locations[0]?.id || "",
+      price: 0,
+      mrp: 0,
+    });
+    onChange(newVariants);
+  };
+
+  const removePrice = (variantIndex: number, priceIndex: number) => {
+    const newVariants = [...value];
+    newVariants[variantIndex].variantPrices = newVariants[
+      variantIndex
+    ].variantPrices.filter((_, i) => i !== priceIndex);
+    onChange(newVariants);
+  };
+
+  const updatePrice = (
+    variantIndex: number,
+    priceIndex: number,
+    updatedPrice: any
+  ) => {
+    const newVariants = [...value];
+    newVariants[variantIndex].variantPrices[priceIndex] = updatedPrice;
+    onChange(newVariants);
+  };
+
   return (
     <div className="space-y-4">
-      {value.map((variant, index) => (
-        <div key={index} className="border p-4 rounded-md">
+      {value.map((variant, variantIndex) => (
+        <div key={variantIndex} className="border p-4 rounded-md">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="font-medium">Variant #{index + 1}</h4>
+            <h4 className="font-medium">Variant #{variantIndex + 1}</h4>
             <Button
               type="button"
               variant="destructive"
               size="icon"
-              onClick={() => removeVariant(index)}
+              onClick={() => removeVariant(variantIndex)}
+              disabled={loading}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -64,16 +122,19 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
             <div>
               <label className="block text-sm font-medium mb-1">Size</label>
               <select
-                value={variant.sizeId || ""}
+                value={variant.sizeId ?? "none"}
                 onChange={(e) =>
-                  updateVariant(index, { sizeId: e.target.value || undefined })
+                  updateVariant(variantIndex, {
+                    sizeId: e.target.value === "none" ? null : e.target.value,
+                  })
                 }
                 className="w-full p-2 border rounded"
+                disabled={loading}
               >
-                <option value="">Select size</option>
+                <option value="none">None</option>
                 {sizes.map((size) => (
                   <option key={size.id} value={size.id}>
-                    {size.value}
+                    {size.name} ({size.value})
                   </option>
                 ))}
               </select>
@@ -82,13 +143,16 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
             <div>
               <label className="block text-sm font-medium mb-1">Color</label>
               <select
-                value={variant.colorId || ""}
+                value={variant.colorId ?? "none"}
                 onChange={(e) =>
-                  updateVariant(index, { colorId: e.target.value || undefined })
+                  updateVariant(variantIndex, {
+                    colorId: e.target.value === "none" ? null : e.target.value,
+                  })
                 }
                 className="w-full p-2 border rounded"
+                disabled={loading}
               >
-                <option value="">Select color</option>
+                <option value="none">None</option>
                 {colors.map((color) => (
                   <option key={color.id} value={color.id}>
                     {color.name}
@@ -98,42 +162,17 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Price (INR)
-              </label>
-              <Input
-                type="number"
-                value={variant.price}
-                onChange={(e) =>
-                  updateVariant(index, { price: Number(e.target.value) })
-                }
-                placeholder="Enter price"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                MRP (INR)
-              </label>
-              <Input
-                type="number"
-                value={variant.mrp}
-                onChange={(e) =>
-                  updateVariant(index, { mrp: Number(e.target.value) })
-                }
-                placeholder="Enter MRP"
-              />
-            </div>
-
-            <div>
               <label className="block text-sm font-medium mb-1">Stock</label>
               <Input
                 type="number"
                 value={variant.stock}
                 onChange={(e) =>
-                  updateVariant(index, { stock: Number(e.target.value) })
+                  updateVariant(variantIndex, {
+                    stock: parseInt(e.target.value) || 0,
+                  })
                 }
                 placeholder="Enter stock"
+                disabled={loading}
               />
             </div>
 
@@ -141,19 +180,115 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
               <label className="block text-sm font-medium mb-1">SKU</label>
               <Input
                 value={variant.sku || ""}
-                onChange={(e) => updateVariant(index, { sku: e.target.value })}
+                onChange={(e) =>
+                  updateVariant(variantIndex, { sku: e.target.value })
+                }
                 placeholder="Enter SKU"
+                disabled={loading}
               />
+            </div>
+            <div className="mt-4 md:col-span-2">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-medium">Prices by Location</h4>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addPrice(variantIndex)}
+                  disabled={loading || locations.length === 0}
+                >
+                  Add Price
+                </Button>
+              </div>
+              {variant.variantPrices.map((price, priceIndex) => (
+                <div
+                  key={priceIndex}
+                  className="border p-3 rounded-md flex items-center gap-4 mb-2"
+                >
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">
+                      Location
+                    </label>
+                    <Select
+                      disabled={loading}
+                      onValueChange={(val) =>
+                        updatePrice(variantIndex, priceIndex, {
+                          ...price,
+                          locationId: val,
+                        })
+                      }
+                      value={price.locationId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((location) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.city}, {location.state},{" "}
+                            {location.country} ({location.pincode})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">
+                      Price (INR)
+                    </label>
+                    <Input
+                      type="number"
+                      value={price.price}
+                      onChange={(e) =>
+                        updatePrice(variantIndex, priceIndex, {
+                          ...price,
+                          price: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="Enter price"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">
+                      MRP (INR)
+                    </label>
+                    <Input
+                      type="number"
+                      value={price.mrp}
+                      onChange={(e) =>
+                        updatePrice(variantIndex, priceIndex, {
+                          ...price,
+                          mrp: parseInt(e.target.value) || 0,
+                        })
+                      }
+                      placeholder="Enter MRP"
+                      disabled={loading}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removePrice(variantIndex, priceIndex)}
+                    disabled={loading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">Images</label>
               <ImageUpload
                 value={variant.images}
-                disabled={false}
-                onChange={(urls) => updateVariant(index, { images: urls })}
+                disabled={loading}
+                onChange={(urls) =>
+                  updateVariant(variantIndex, { images: urls })
+                }
                 onRemove={(url) =>
-                  updateVariant(index, {
+                  updateVariant(variantIndex, {
                     images: variant.images.filter((img) => img !== url),
                   })
                 }
@@ -162,12 +297,14 @@ const VariantForm = ({ value, onChange, sizes, colors }: VariantFormProps) => {
           </div>
         </div>
       ))}
-
-      <Button type="button" onClick={addVariant}>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={addVariant}
+        disabled={loading}
+      >
         Add Variant
       </Button>
     </div>
   );
-};
-
-export default VariantForm;
+}
