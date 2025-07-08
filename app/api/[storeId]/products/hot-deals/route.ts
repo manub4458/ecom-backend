@@ -124,7 +124,7 @@ export async function GET(
       return NextResponse.json([]);
     }
 
-    // Fetch product details with variantPrices
+    // Fetch product details with variantPrices filtered by location
     const products = await db.product.findMany({
       where: {
         id: { in: productIds },
@@ -144,7 +144,12 @@ export async function GET(
             size: true,
             color: true,
             images: true,
-            variantPrices: true, // Include variantPrices
+            variantPrices: {
+              where: location?.id ? { locationId: location.id } : undefined,
+              include: {
+                location: true,
+              },
+            },
           },
         },
         productSpecifications: {
@@ -159,27 +164,15 @@ export async function GET(
       },
     });
 
-    // Combine sales data with product details and add location-based price
+    // Combine sales data with product details
     const result = paginatedProducts
       .map((item) => {
         const product = products.find((p) => p.id === item.productId);
         if (!product) return null;
 
-        // Map variants to include price based on location
+        // Map variants to include price from variantPrices
         const updatedVariants = product.variants.map((variant) => {
-          let price = 0;
-          if (location && variant.variantPrices.length > 0) {
-            // Find price for the specific location
-            const variantPrice = variant.variantPrices.find(
-              (vp) => vp.locationId === location.id
-            );
-            price = variantPrice
-              ? variantPrice.price
-              : variant.variantPrices[0]?.price || 0;
-          } else {
-            // Fallback to first variantPrice or 0
-            price = variant.variantPrices[0]?.price || 0;
-          }
+          const price = variant.variantPrices[0]?.price || 0; // Use first price or 0 as fallback
           return {
             ...variant,
             price, // Add price field to variant
