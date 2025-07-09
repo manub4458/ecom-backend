@@ -241,11 +241,38 @@ model Product {
   isArchieved           Boolean                @default(false)
   isNewArrival          Boolean                @default(false)
   productSpecifications ProductSpecification[] @relation("ProductToProductSpecification")
+  reviews               Review[]               @relation("ProductToReview")
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   variants              Variant[]
 
   @@index([categoryId, subCategoryId, storeId])
+}
+
+model Review {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  productId String        @db.ObjectId
+  product   Product       @relation("ProductToReview", fields: [productId], references: [id], onDelete: Cascade)
+  userName  String
+  userId    String
+  rating    Int
+  text      String
+  images    ReviewImage[] @relation("ReviewToReviewImage")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([productId])
+}
+
+model ReviewImage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  reviewId  String   @db.ObjectId
+  review    Review   @relation("ReviewToReviewImage", fields: [reviewId], references: [id], onDelete: Cascade)
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reviewId])
 }
 
 model Order {

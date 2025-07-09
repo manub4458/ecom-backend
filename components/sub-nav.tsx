@@ -60,6 +60,11 @@ export const SubNav = ({
         active: pathname === `/${params.storeId}/orders`,
       },
       {
+        href: `/${params.storeId}/reviews`,
+        label: "Reviews",
+        active: pathname === `/${params.storeId}/reviews`,
+      },
+      {
         href: `/${params.storeId}/location`,
         label: "Locations",
         active: pathname === `/${params.storeId}/location`,
@@ -81,7 +86,7 @@ export const SubNav = ({
   return (
     <nav
       className={cn(
-        "flex flex-col space-y-5 md:space-y-0 md:flex-row md:items-center md:space-x-4 lg:space-x-6",
+        "flex flex-col space-y-5 md:space-y-0 md:flex-row md:items-center md:space-x-4 lg:space-x-6 overflow-x-auto max-w-[78vw] scrollbar-thin p-3",
         className
       )}
     >
@@ -90,7 +95,7 @@ export const SubNav = ({
           key={route.href}
           href={route.href}
           className={cn(
-            "text-sm font-medium transition-colors hover:text-primary",
+            "text-sm font-medium transition-colors hover:text-primary whitespace-nowrap",
             route.active
               ? "text-black dark:text-white"
               : "text-muted-foreground"

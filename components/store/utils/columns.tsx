@@ -7,12 +7,59 @@ import { SizeCellActions } from "./size-cell-actions";
 import { ColorCellActions } from "./color-cell-actions";
 import { ProductCellActions } from "./product-cell-actions";
 import { SubCategoryCellActions } from "./subcategory-cell-actions";
+import { ReviewCellActions } from "./review-cell-actions";
+import { LocationCellActions } from "./location-cell-actions";
 
 export type Billboard = {
   id: string;
   label: string;
   createdAt: string;
 };
+export type ReviewColumn = {
+  id: string;
+  productName: string;
+  userName: string;
+  rating: number;
+  text: string;
+  imageCount: number;
+  createdAt: string;
+  productId: string;
+};
+
+export const reviewColumns: ColumnDef<ReviewColumn>[] = [
+  {
+    accessorKey: "productName",
+    header: "Product Name",
+  },
+  {
+    accessorKey: "userName",
+    header: "User Name",
+  },
+  {
+    accessorKey: "rating",
+    header: "Rating",
+  },
+  {
+    accessorKey: "text",
+    header: "Review Text",
+    cell: ({ row }) => (
+      <div className="max-w-xs truncate">{row.original.text}</div>
+    ),
+  },
+  {
+    accessorKey: "imageCount",
+    header: "Images",
+    cell: ({ row }) => <div>{row.original.imageCount} image(s)</div>,
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created At",
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => <ReviewCellActions data={row.original} />,
+  },
+];
 
 export const columns: ColumnDef<Billboard>[] = [
   {
@@ -147,6 +194,10 @@ export const locationColumns: ColumnDef<LocationColumn>[] = [
   {
     accessorKey: "createdAt",
     header: "Created At",
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => <LocationCellActions data={row.original} />,
   },
 ];
 

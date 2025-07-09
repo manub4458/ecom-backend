@@ -4,9 +4,10 @@
  * @type {string[]}
  */
 export const publicRoutes = [
-    "/token-verification"
-  ];
-
+  "/token-verification",
+  "/api/[storeId]/products/[productId]/reviews",
+  "/api/[storeId]/products/[productId]/reviews/[reviewId]",
+];
 
 /**
  * An array of routes that are used for authentication
@@ -14,12 +15,7 @@ export const publicRoutes = [
  * @type {string[]}
  */
 
-export const authRoutes = [
-    "/login",
-    "/sign-up",
-    "/forget",
-    "/new-password"
-]
+export const authRoutes = ["/login", "/sign-up", "/forget", "/new-password"];
 
 /**
  * The prefix for API authentication routes
@@ -34,4 +30,3 @@ export const apiAuthPrefix = "/api";
  * @type {string}
  */
 export const DEFAULT_LOGIN_REDIRECT = "/";
-
