@@ -10,6 +10,7 @@ export async function POST(
   const headers = {
     "Access-Control-Allow-Origin":
       process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "http://localhost:3000" ||
       "http://localhost:3001" ||
       "https://favobliss.vercel.app",
     "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
