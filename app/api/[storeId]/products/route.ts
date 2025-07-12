@@ -244,6 +244,7 @@ export async function GET(
     const limit = parseInt(searchParams.get("limit") || "12");
     const price = searchParams.get("price");
     const locationId = searchParams.get("locationId");
+    const isFeatured = searchParams.get("isFeatured");
 
     console.log("Received filters:", {
       slug,
@@ -256,6 +257,7 @@ export async function GET(
       limit,
       price,
       locationId,
+      isFeatured,
     });
 
     if (slug) {
@@ -313,6 +315,10 @@ export async function GET(
 
     if (categoryId) {
       where.categoryId = categoryId;
+    }
+
+    if (isFeatured) {
+      where.isFeatured = isFeatured;
     }
 
     if (brandId) {
