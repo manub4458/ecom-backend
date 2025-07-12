@@ -9,12 +9,14 @@ import { ProductCellActions } from "./product-cell-actions";
 import { SubCategoryCellActions } from "./subcategory-cell-actions";
 import { ReviewCellActions } from "./review-cell-actions";
 import { LocationCellActions } from "./location-cell-actions";
+import { BrandCellActions } from "./brand-cell-actions";
 
 export type Billboard = {
   id: string;
   label: string;
   createdAt: string;
 };
+
 export type ReviewColumn = {
   id: string;
   productName: string;
@@ -24,6 +26,13 @@ export type ReviewColumn = {
   imageCount: number;
   createdAt: string;
   productId: string;
+};
+
+export type BrandColumn = {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
 };
 
 export const reviewColumns: ColumnDef<ReviewColumn>[] = [
@@ -58,6 +67,25 @@ export const reviewColumns: ColumnDef<ReviewColumn>[] = [
   {
     id: "actions",
     cell: ({ row }) => <ReviewCellActions data={row.original} />,
+  },
+];
+
+export const brandColumns: ColumnDef<BrandColumn>[] = [
+  {
+    accessorKey: "name",
+    header: "Name",
+  },
+  {
+    accessorKey: "slug",
+    header: "Slug",
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created At",
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => <BrandCellActions data={row.original} />,
   },
 ];
 

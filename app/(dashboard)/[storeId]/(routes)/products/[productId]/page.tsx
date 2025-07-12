@@ -14,6 +14,7 @@ const ProductPage = async ({
         id: params.productId,
       },
       include: {
+        brand: true,
         category: true,
         subCategory: {
           include: {
@@ -44,6 +45,12 @@ const ProductPage = async ({
       },
     });
   }
+
+  const brands = await db.brand.findMany({
+    where: {
+      storeId: params.storeId,
+    },
+  });
 
   const categories = await db.category.findMany({
     where: {
@@ -92,6 +99,7 @@ const ProductPage = async ({
       <div className="flex-1 space-y-4 p-8 pt-6">
         <ProductForm
           data={product}
+          brands={brands}
           categories={categories}
           subCategories={subCategories}
           sizes={sizes}

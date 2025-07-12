@@ -22,7 +22,7 @@ export async function POST(
     const {
       name,
       slug,
-      brand,
+      brandId,
       about,
       description,
       sizeAndFit,
@@ -76,6 +76,16 @@ export async function POST(
           "Subcategory must belong to the selected category",
           { status: 400 }
         );
+      }
+    }
+
+    // Validate brand if provided
+    if (brandId) {
+      const brand = await db.brand.findUnique({
+        where: { id: brandId, storeId: params.storeId },
+      });
+      if (!brand) {
+        return new NextResponse("Invalid brand", { status: 400 });
       }
     }
 
@@ -149,7 +159,7 @@ export async function POST(
       data: {
         name,
         slug,
-        brand,
+        brandId,
         about,
         description,
         sizeAndFit,
@@ -189,6 +199,7 @@ export async function POST(
         },
       },
       include: {
+        brand: true,
         variants: {
           include: {
             images: true,
@@ -225,6 +236,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");
     const categoryId = searchParams.get("categoryId");
+    const brandId = searchParams.get("brandId");
     const colorId = searchParams.get("colorId");
     const sizeId = searchParams.get("sizeId");
     const type = searchParams.get("type");
@@ -236,6 +248,7 @@ export async function GET(
     console.log("Received filters:", {
       slug,
       categoryId,
+      brandId,
       colorId,
       sizeId,
       type,
@@ -253,6 +266,7 @@ export async function GET(
           isArchieved: false,
         },
         include: {
+          brand: true,
           category: true,
           subCategory: {
             include: {
@@ -301,7 +315,10 @@ export async function GET(
       where.categoryId = categoryId;
     }
 
-    // Filter by colorId or sizeId through variants
+    if (brandId) {
+      where.brandId = brandId;
+    }
+
     if (colorId || sizeId) {
       where.variants = {
         some: {
@@ -315,7 +332,6 @@ export async function GET(
       where.type = type;
     }
 
-    // Filter by price through variantPrices
     if (price && locationId) {
       let minPrice: number | undefined;
       let maxPrice: number | undefined;
@@ -353,6 +369,7 @@ export async function GET(
     const products = await db.product.findMany({
       where,
       include: {
+        brand: true,
         category: true,
         subCategory: {
           include: {
@@ -391,7 +408,7 @@ export async function GET(
     });
 
     console.log(
-      `Found ${products.length} products for categoryId: ${categoryId}`
+      `Found ${products.length} products for storeId: ${params.storeId}, brandId: ${brandId}, categoryId: ${categoryId},`
     );
 
     return NextResponse.json(products);

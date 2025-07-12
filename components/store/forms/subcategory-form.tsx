@@ -33,8 +33,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
-import { ImageUpload } from "@/components/store/utils/image-upload";
 import { SubCategorySchema } from "@/schemas/subcategory-form-schema";
+import { SingleImageUpload } from "../utils/single-image-upload";
 
 interface SubCategoryFormProps {
   initialData: SubCategory | null;
@@ -330,7 +330,7 @@ export const SubCategoryForm = ({
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="bannerImage"
               render={({ field }) => (
@@ -339,6 +339,25 @@ export const SubCategoryForm = ({
                   <FormControl>
                     <ImageUpload
                       value={field.value ? [field.value] : []}
+                      disabled={loading}
+                      onChange={(url) => field.onChange(url)}
+                      onRemove={() => field.onChange("")}
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            /> */}
+
+            <FormField
+              control={form.control}
+              name="bannerImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Banner image</FormLabel>
+                  <FormControl>
+                    <SingleImageUpload
+                      value={field.value || ""}
                       disabled={loading}
                       onChange={(url) => field.onChange(url)}
                       onRemove={() => field.onChange("")}

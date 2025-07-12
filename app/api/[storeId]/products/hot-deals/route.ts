@@ -132,6 +132,7 @@ export async function GET(
         isArchieved: false,
       },
       include: {
+        brand: true,
         category: true,
         subCategory: {
           include: {

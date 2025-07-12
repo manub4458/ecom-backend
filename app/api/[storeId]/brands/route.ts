@@ -7,27 +7,19 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { pincode, city, state, country } = await request.json();
+    const { name, slug, bannerImage, cardImage } = await request.json();
     const session = await auth();
 
     if (!session) {
       return new NextResponse("Unauthorized Access", { status: 401 });
     }
 
-    if (!pincode) {
-      return new NextResponse("Pincode is required", { status: 400 });
+    if (!name) {
+      return new NextResponse("Name is required", { status: 400 });
     }
 
-    if (!city) {
-      return new NextResponse("City is required", { status: 400 });
-    }
-
-    if (!state) {
-      return new NextResponse("State is required", { status: 400 });
-    }
-
-    if (!country) {
-      return new NextResponse("Country is required", { status: 400 });
+    if (!slug) {
+      return new NextResponse("Slug is required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -44,19 +36,31 @@ export async function POST(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    const location = await db.location.create({
-      data: {
-        pincode,
-        city,
-        state,
-        country,
+    // Check for unique slug
+    const existingBrand = await db.brand.findFirst({
+      where: {
+        slug,
         storeId: params.storeId,
       },
     });
 
-    return NextResponse.json(location);
+    if (existingBrand) {
+      return new NextResponse("Brand slug already exists", { status: 400 });
+    }
+
+    const brand = await db.brand.create({
+      data: {
+        name,
+        slug,
+        bannerImage,
+        cardImage,
+        storeId: params.storeId,
+      },
+    });
+
+    return NextResponse.json(brand);
   } catch (error) {
-    console.log("[LOCATION_POST]", error);
+    console.log("[BRANDS_POST]", error);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
@@ -67,36 +71,36 @@ export async function GET(
 ) {
   try {
     if (!params.storeId) {
-      return new NextResponse("StoreId is required", { status: 400 });
+      return new NextResponse("Store ID is required", { status: 400 });
     }
 
     const { searchParams } = new URL(request.url);
-    const pincode = searchParams.get("pincode");
+    const slug = searchParams.get("slug");
 
-    if (pincode) {
-      const location = await db.location.findUnique({
+    if (slug) {
+      const brand = await db.brand.findUnique({
         where: {
-          pincode,
+          slug,
           storeId: params.storeId,
         },
       });
 
-      if (!location) {
+      if (!brand) {
         return new NextResponse("Brand not found", { status: 404 });
       }
 
-      return NextResponse.json(location);
+      return NextResponse.json(brand);
     }
 
-    const locations = await db.location.findMany({
+    const brands = await db.brand.findMany({
       where: {
         storeId: params.storeId,
       },
     });
 
-    return NextResponse.json(locations);
+    return NextResponse.json(brands);
   } catch (error) {
-    console.log("[LOCATION_GET]", error);
+    console.log("[BRANDS_GET]", error);
     return new NextResponse("Internal server error", { status: 500 });
   }
 }

@@ -30,8 +30,7 @@ model Account {
   scope             String?
   id_token          String? @db.String
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -68,6 +67,7 @@ model Store {
   specificationGroups SpecificationGroup[] @relation("StoreToSpecificationGroup")
   specificationFields SpecificationField[] @relation("StoreToSpecificationField")
   locations           Location[]           @relation("StoreToLocation")
+  brands              Brand[]              @relation("StoreToBrand")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }
@@ -76,7 +76,7 @@ model Location {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   storeId       String         @db.ObjectId
   store         Store          @relation("StoreToLocation", fields: [storeId], references: [id], onDelete: Cascade)
-  pincode       String
+  pincode       String         @unique
   city          String
   state         String
   country       String
@@ -219,6 +219,21 @@ model Color {
   @@index([storeId])
 }
 
+model Brand {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  storeId     String    @db.ObjectId
+  store       Store     @relation("StoreToBrand", fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String    @unique
+  bannerImage String
+  cardImage   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[] @relation("BrandToProduct")
+
+  @@index([storeId])
+}
+
 model Product {
   id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
   storeId               String                 @db.ObjectId
@@ -227,9 +242,10 @@ model Product {
   category              Category?              @relation("CategoryToProduct", fields: [categoryId], references: [id], onDelete: Restrict)
   subCategoryId         String?                @db.ObjectId
   subCategory           SubCategory?           @relation("SubCategoryToProduct", fields: [subCategoryId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  brandId               String?                @db.ObjectId
+  brand                 Brand?                 @relation("BrandToProduct", fields: [brandId], references: [id], onDelete: SetNull)
   name                  String
   slug                  String                 @unique
-  brand                 String?
   about                 String?
   description           String
   sizeAndFit            String[]
@@ -246,7 +262,7 @@ model Product {
   updatedAt             DateTime               @updatedAt
   variants              Variant[]
 
-  @@index([categoryId, subCategoryId, storeId])
+  @@index([categoryId, subCategoryId, storeId, brandId])
 }
 
 model Review {

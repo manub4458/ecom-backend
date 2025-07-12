@@ -3,6 +3,7 @@
 import * as z from "zod";
 import { useState } from "react";
 import {
+  Brand,
   Category,
   Color,
   Product,
@@ -43,13 +44,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
 import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
-import { ImageUpload } from "@/components/store/utils/image-upload";
+import { ProductFeatures } from "@/components/store/utils/product-features";
+import { SpecificationInput } from "@/components/store/utils/specification-input";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { Switch } from "@/components/ui/switch";
-import { ProductFeatures } from "../utils/product-features";
-import { SpecificationInput } from "../utils/specification-input";
 import Editor from "./editor";
 import VariantForm from "./variant-form";
+// import Editor from "@/components/store/utils/editor";
+// import VariantForm from "@/components/store/utils/variant-form";
 
 const getSubCategoryName = (
   subCategory: SubCategory,
@@ -65,6 +67,7 @@ const getSubCategoryName = (
 interface ProductFormProps {
   data:
     | (Product & {
+        brand: Brand | null;
         variants: (Variant & {
           images: VariantImage[];
           variantPrices: { locationId: string; price: number; mrp: number }[];
@@ -75,6 +78,7 @@ interface ProductFormProps {
         }[];
       })
     | null;
+  brands: Brand[];
   categories: Category[];
   subCategories: SubCategory[];
   sizes: Size[];
@@ -85,6 +89,7 @@ interface ProductFormProps {
 
 export const ProductForm = ({
   data,
+  brands,
   categories,
   subCategories,
   sizes,
@@ -108,7 +113,7 @@ export const ProductForm = ({
       ? {
           ...data,
           slug: data.slug || "",
-          brand: data.brand || "",
+          brandId: data.brandId ?? undefined,
           categoryId: data.categoryId ?? undefined,
           subCategoryId: data.subCategoryId ?? undefined,
           about: data.about || "",
@@ -131,7 +136,7 @@ export const ProductForm = ({
       : {
           name: "",
           slug: "",
-          brand: "",
+          brandId: undefined,
           about: "",
           description: "",
           materialAndCare: [],
@@ -298,6 +303,42 @@ export const ProductForm = ({
             />
             <FormField
               control={form.control}
+              name="brandId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Brand</FormLabel>
+                  <Select
+                    disabled={loading}
+                    onValueChange={field.onChange}
+                    value={field.value === null ? undefined : field.value}
+                    defaultValue={
+                      field.value === null ? undefined : field.value
+                    }
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          defaultValue={
+                            field.value === null ? undefined : field.value
+                          }
+                          placeholder="Select a brand"
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {brands.map((brand) => (
+                        <SelectItem key={brand.id} value={brand.id}>
+                          {brand.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
@@ -354,8 +395,12 @@ export const ProductForm = ({
                   <Select
                     disabled={loading}
                     onValueChange={field.onChange}
-                    value={field.value || "none"}
-                    defaultValue={field.value || "none"}
+                    value={
+                      field.value === null ? undefined : field.value || "none"
+                    }
+                    defaultValue={
+                      field.value === null ? undefined : field.value || "none"
+                    }
                   >
                     <FormControl>
                       <SelectTrigger>

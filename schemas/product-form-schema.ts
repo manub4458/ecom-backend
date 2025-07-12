@@ -37,7 +37,8 @@ export const ProductSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug must contain only lowercase letters, numbers, and hyphens"
     ),
-  brand: z.string().optional(),
+  // brand: z.string().optional(),
+  brandId: z.string().nullable().optional(),
   about: z.string().optional(),
   description: z.string().min(1, "Description is required"),
   sizeAndFit: z.array(z.string()).optional(),

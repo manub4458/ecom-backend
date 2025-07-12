@@ -22,7 +22,7 @@ export async function PATCH(
     const {
       name,
       slug,
-      brand,
+      brandId,
       about,
       description,
       sizeAndFit,
@@ -80,6 +80,16 @@ export async function PATCH(
           "Subcategory must belong to the selected category",
           { status: 400 }
         );
+      }
+    }
+
+    // Validate brand if provided
+    if (brandId) {
+      const brand = await db.brand.findUnique({
+        where: { id: brandId, storeId: params.storeId },
+      });
+      if (!brand) {
+        return new NextResponse("Invalid brand", { status: 400 });
       }
     }
 
@@ -158,7 +168,7 @@ export async function PATCH(
       data: {
         name,
         slug,
-        brand,
+        brandId,
         about,
         description,
         sizeAndFit,
@@ -224,6 +234,7 @@ export async function PATCH(
         },
       },
       include: {
+        brand: true,
         variants: {
           include: {
             images: true,
@@ -321,6 +332,7 @@ export async function GET(
         isArchieved: false,
       },
       include: {
+        brand: true,
         category: true,
         subCategory: {
           include: {
@@ -366,6 +378,7 @@ export async function GET(
           isArchieved: false,
         },
         include: {
+          brand: true,
           category: true,
           subCategory: {
             include: {

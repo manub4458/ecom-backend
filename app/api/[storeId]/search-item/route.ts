@@ -27,6 +27,7 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("query")?.trim();
+    const brandName = searchParams.get("brandName");
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
 
@@ -38,11 +39,21 @@ export async function GET(
     }
 
     const skip = (page - 1) * limit;
-    const categoryLimit = Math.floor(limit / 3);
-    const subCategoryLimit = Math.floor(limit / 3);
-    const productLimit = Math.ceil(limit / 3);
+    const brandLimit = Math.floor(limit / 4); // Split limit across brands, categories, subcategories, products
+    const categoryLimit = Math.floor(limit / 4);
+    const subCategoryLimit = Math.floor(limit / 4);
+    const productLimit = Math.ceil(limit / 4); // Ensure total adds up to limit
 
-    // Search for categories
+    // Fetch brands
+    const brands = await db.brand.findMany({
+      where: {
+        storeId: params.storeId,
+        name: { contains: query, mode: "insensitive" },
+      },
+      take: brandLimit,
+    });
+
+    // Fetch categories
     const categories = await db.category.findMany({
       where: {
         storeId: params.storeId,
@@ -70,7 +81,6 @@ export async function GET(
       take: categoryLimit,
     });
 
-    // Transform categories
     const transformedCategories = categories.map((category) => ({
       ...category,
       subCategories: category.subCategories
@@ -87,7 +97,7 @@ export async function GET(
         })),
     }));
 
-    // Search for subcategories (only name matches)
+    // Fetch subcategories
     const subCategories = await db.subCategory.findMany({
       where: {
         storeId: params.storeId,
@@ -139,14 +149,30 @@ export async function GET(
       take: subCategoryLimit,
     });
 
-    // Search for products
+    // Fetch products
+    const productWhere: any = {
+      storeId: params.storeId,
+      isArchieved: false,
+      name: { contains: query, mode: "insensitive" },
+    };
+
+    if (brandName) {
+      const brand = await db.brand.findFirst({
+        where: {
+          name: brandName,
+          storeId: params.storeId,
+        },
+      });
+      if (!brand) {
+        return new NextResponse("Brand not found", { status: 404, headers });
+      }
+      productWhere.brandId = brand.id;
+    }
+
     const products = await db.product.findMany({
-      where: {
-        storeId: params.storeId,
-        isArchieved: false,
-        name: { contains: query, mode: "insensitive" },
-      },
+      where: productWhere,
       include: {
+        brand: true,
         category: true,
         subCategory: {
           include: {
@@ -180,17 +206,23 @@ export async function GET(
 
     // Combine results
     const searchResults = {
+      brands,
       categories: transformedCategories,
       subCategories,
       products,
       pagination: {
         page,
         limit,
+        totalBrands: brands.length,
         totalCategories: categories.length,
         totalSubCategories: subCategories.length,
         totalProducts: products.length,
       },
     };
+
+    console.log(
+      `[SEARCH_GET] Found ${brands.length} brands, ${products.length} products, ${categories.length} categories, ${subCategories.length} subcategories for storeId: ${params.storeId}, query: ${query}, brandName: ${brandName}`
+    );
 
     return NextResponse.json(searchResults, { headers });
   } catch (error) {
