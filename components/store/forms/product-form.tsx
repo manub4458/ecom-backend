@@ -499,7 +499,7 @@ export const ProductForm = ({
                   <div className="space-y-1 leading-none">
                     <FormLabel>Featured</FormLabel>
                     <FormDescription>
-                      This product will appear on the home page
+                      This product will appear on the as favobliss choice
                     </FormDescription>
                   </div>
                   <FormControl>

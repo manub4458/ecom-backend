@@ -80,7 +80,7 @@ export const SpecificationFieldClient = ({
                 }
               >
                 <Edit className="mr-2 h-4 w-4" />
-                Update
+                Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {

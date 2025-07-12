@@ -317,10 +317,6 @@ export async function GET(
       where.categoryId = categoryId;
     }
 
-    if (isFeatured) {
-      where.isFeatured = isFeatured;
-    }
-
     if (brandId) {
       where.brandId = brandId;
     }
@@ -336,6 +332,14 @@ export async function GET(
 
     if (type) {
       where.type = type;
+    }
+
+    if (isFeatured) {
+      if (isFeatured === "true") {
+        where.isFeatured = true;
+      } else if (isFeatured === "false") {
+        where.isFeatured = false;
+      }
     }
 
     if (price && locationId) {

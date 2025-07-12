@@ -80,7 +80,7 @@ export const SubCategoryCellActions = ({
             }
           >
             <Edit className="h-4 w-4 mr-4" />
-            Update
+            Edit
           </DropdownMenuItem>
           <DropdownMenuItem disabled={loading} onClick={() => setOpen(true)}>
             <Trash2 className="h-4 w-4 mr-4" />
