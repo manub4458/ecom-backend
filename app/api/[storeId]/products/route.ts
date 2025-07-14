@@ -298,6 +298,11 @@ export async function GET(
               },
             },
           },
+          reviews: {
+            select: {
+              rating: true,
+            },
+          },
         },
       });
 
@@ -305,7 +310,23 @@ export async function GET(
         return new NextResponse("Product not found", { status: 404 });
       }
 
-      return NextResponse.json(product);
+      // Calculate average rating and number of ratings
+      const ratings = product.reviews.map((review) => review.rating);
+      const numberOfRatings = ratings.length;
+      const averageRating =
+        numberOfRatings > 0
+          ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
+          : 0;
+
+      // Remove reviews from the response and add rating summary
+      const { reviews, ...productWithoutReviews } = product;
+      const productWithRatings = {
+        ...productWithoutReviews,
+        averageRating: Number(averageRating.toFixed(2)),
+        numberOfRatings,
+      };
+
+      return NextResponse.json(productWithRatings);
     }
 
     const where: any = {
@@ -409,6 +430,11 @@ export async function GET(
             },
           },
         },
+        reviews: {
+          select: {
+            rating: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -417,11 +443,29 @@ export async function GET(
       take: limit,
     });
 
+    // Transform products to include average rating and number of ratings
+    const productsWithRatings = products.map((product) => {
+      const ratings = product.reviews.map((review) => review.rating);
+      const numberOfRatings = ratings.length;
+      const averageRating =
+        numberOfRatings > 0
+          ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
+          : 0;
+
+      // Remove reviews from the response and add rating summary
+      const { reviews, ...productWithoutReviews } = product;
+      return {
+        ...productWithoutReviews,
+        averageRating: Number(averageRating.toFixed(2)),
+        numberOfRatings,
+      };
+    });
+
     console.log(
       `Found ${products.length} products for storeId: ${params.storeId}, brandId: ${brandId}, categoryId: ${categoryId},`
     );
 
-    return NextResponse.json(products);
+    return NextResponse.json(productsWithRatings);
   } catch (error) {
     console.log("[PRODUCTS_GET]", error);
     return new NextResponse("Internal server error", { status: 500 });
