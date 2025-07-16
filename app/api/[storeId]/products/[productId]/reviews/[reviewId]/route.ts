@@ -13,14 +13,14 @@ export async function DELETE(
       "http://localhost:3000" ||
       "http://localhost:3001" ||
       "https://favobliss.vercel.app",
-    "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
   };
 
   // Handle preflight OPTIONS request
-  if (request.method === "OPTIONS") {
-    return new NextResponse(null, { status: 204, headers });
-  }
+  // if (request.method === "OPTIONS") {
+  //   return new NextResponse(null, { status: 204, headers });
+  // }
 
   try {
     if (!params.productId) {

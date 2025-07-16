@@ -23,7 +23,10 @@ export default auth((req) => {
     const response = new NextResponse(null, { status: 204 });
     // Apply CORS headers
     response.headers.set("Access-Control-Allow-Origin", "*");
-    response.headers.set("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    response.headers.set(
+      "Access-Control-Allow-Methods",
+      "POST, GET, OPTIONS, DELETE"
+    );
     response.headers.set(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization"
