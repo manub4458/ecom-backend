@@ -230,7 +230,7 @@ export async function GET(
       "http://localhost:3001" ||
       "https://favobliss.vercel.app",
     "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type",
   };
 
   // Handle preflight OPTIONS request
@@ -240,7 +240,7 @@ export async function GET(
 
   try {
     if (!params.storeId) {
-      return new NextResponse("Store ID is required", { status: 400 });
+      return new NextResponse("Store ID is required", { status: 400, headers });
     }
 
     const { searchParams } = new URL(request.url);
@@ -282,7 +282,7 @@ export async function GET(
       });
       if (!location) {
         console.log("invalid pincode", pincode);
-        return new NextResponse("Invalid pincode", { status: 404 });
+        return new NextResponse("Invalid pincode", { status: 404, headers });
       }
       resolvedLocationId = location.id;
     }
@@ -336,7 +336,7 @@ export async function GET(
       });
 
       if (!product) {
-        return new NextResponse("Product not found", { status: 404 });
+        return new NextResponse("Product not found", { status: 404, headers });
       }
 
       const ratings = product.reviews.map((review) => review.rating);
@@ -353,7 +353,7 @@ export async function GET(
         numberOfRatings,
       };
 
-      return NextResponse.json(productWithRatings);
+      return NextResponse.json(productWithRatings, { headers });
     }
 
     const where: any = {
@@ -500,9 +500,9 @@ export async function GET(
       `Found ${products.length} products for storeId: ${params.storeId}, brandId: ${brandId}, categoryId: ${categoryId},`
     );
 
-    return NextResponse.json(productsWithRatings);
+    return NextResponse.json(productsWithRatings, { headers });
   } catch (error) {
     console.log("[PRODUCTS_GET]", error);
-    return new NextResponse("Internal server error", { status: 500 });
+    return new NextResponse("Internal server error", { status: 500, headers });
   }
 }
