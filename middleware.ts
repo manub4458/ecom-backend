@@ -27,10 +27,7 @@ export default auth((req) => {
       "Access-Control-Allow-Methods",
       "POST, GET, OPTIONS, DELETE"
     );
-    response.headers.set(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type");
     return response;
   }
 

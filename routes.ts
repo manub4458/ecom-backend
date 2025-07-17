@@ -8,6 +8,8 @@ export const publicRoutes = [
   "/api/[storeId]/products/[productId]/reviews",
   "/api/[storeId]/products/[productId]/reviews/[reviewId]",
   "/api/products/[productId]/reviews/[reviewId]",
+  "/api/[storeId]/products",
+  "/api/products",
 ];
 
 /**

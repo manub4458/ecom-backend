@@ -7,6 +7,7 @@ export async function POST(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
+  // Unchanged POST endpoint
   try {
     const session = await auth();
     const body = await request.json();
@@ -55,7 +56,6 @@ export async function POST(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Validate category
     const category = await db.category.findUnique({
       where: { id: categoryId },
     });
@@ -63,7 +63,6 @@ export async function POST(
       return new NextResponse("Invalid category", { status: 400 });
     }
 
-    // Validate subcategory if provided
     if (subCategoryId) {
       const subCategory = await db.subCategory.findUnique({
         where: { id: subCategoryId },
@@ -79,7 +78,6 @@ export async function POST(
       }
     }
 
-    // Validate brand if provided
     if (brandId) {
       const brand = await db.brand.findUnique({
         where: { id: brandId, storeId: params.storeId },
@@ -89,7 +87,6 @@ export async function POST(
       }
     }
 
-    // Validate specification fields if provided
     if (specifications && specifications.length > 0) {
       const specificationFieldIds = specifications.map(
         (spec) => spec.specificationFieldId
@@ -109,7 +106,6 @@ export async function POST(
       }
     }
 
-    // Validate variants and their prices
     for (const variant of variants) {
       if (variant.sizeId !== null && variant.sizeId) {
         const size = await db.size.findUnique({
@@ -137,7 +133,6 @@ export async function POST(
           });
         }
       }
-      // Validate variant prices
       if (variant.variantPrices && variant.variantPrices.length > 0) {
         const locationIds = variant.variantPrices.map((vp) => vp.locationId);
         const locations = await db.location.findMany({
@@ -228,6 +223,21 @@ export async function GET(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
+  const headers = {
+    "Access-Control-Allow-Origin":
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "http://localhost:3000" ||
+      "http://localhost:3001" ||
+      "https://favobliss.vercel.app",
+    "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+
+  // Handle preflight OPTIONS request
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
+
   try {
     if (!params.storeId) {
       return new NextResponse("Store ID is required", { status: 400 });
@@ -244,7 +254,9 @@ export async function GET(
     const limit = parseInt(searchParams.get("limit") || "12");
     const price = searchParams.get("price");
     const locationId = searchParams.get("locationId");
+    const pincode = searchParams.get("pincode"); // Added pincode parameter
     const isFeatured = searchParams.get("isFeatured");
+    const variantIds = searchParams.get("variantIds")?.split(","); // Added variantIds parameter
 
     console.log("Received filters:", {
       slug,
@@ -257,8 +269,23 @@ export async function GET(
       limit,
       price,
       locationId,
+      pincode,
       isFeatured,
+      variantIds,
     });
+
+    // Resolve locationId from pincode if provided
+    let resolvedLocationId = locationId;
+    if (pincode && !locationId) {
+      const location = await db.location.findUnique({
+        where: { pincode, storeId: params.storeId },
+      });
+      if (!location) {
+        console.log("invalid pincode", pincode);
+        return new NextResponse("Invalid pincode", { status: 404 });
+      }
+      resolvedLocationId = location.id;
+    }
 
     if (slug) {
       const product = await db.product.findUnique({
@@ -282,7 +309,9 @@ export async function GET(
               color: true,
               images: true,
               variantPrices: {
-                where: locationId ? { locationId } : undefined,
+                where: resolvedLocationId
+                  ? { locationId: resolvedLocationId }
+                  : undefined,
                 include: {
                   location: true,
                 },
@@ -310,7 +339,6 @@ export async function GET(
         return new NextResponse("Product not found", { status: 404 });
       }
 
-      // Calculate average rating and number of ratings
       const ratings = product.reviews.map((review) => review.rating);
       const numberOfRatings = ratings.length;
       const averageRating =
@@ -318,7 +346,6 @@ export async function GET(
           ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
           : 0;
 
-      // Remove reviews from the response and add rating summary
       const { reviews, ...productWithoutReviews } = product;
       const productWithRatings = {
         ...productWithoutReviews,
@@ -363,7 +390,15 @@ export async function GET(
       }
     }
 
-    if (price && locationId) {
+    if (variantIds && variantIds.length > 0) {
+      where.variants = {
+        some: {
+          id: { in: variantIds },
+        },
+      };
+    }
+
+    if (price && resolvedLocationId) {
       let minPrice: number | undefined;
       let maxPrice: number | undefined;
 
@@ -383,7 +418,7 @@ export async function GET(
             ...(where.variants?.some || {}),
             variantPrices: {
               some: {
-                locationId,
+                locationId: resolvedLocationId,
                 price: {
                   ...(minPrice && { gte: minPrice }),
                   ...(maxPrice && { lte: maxPrice }),
@@ -414,7 +449,9 @@ export async function GET(
             color: true,
             images: true,
             variantPrices: {
-              where: locationId ? { locationId } : undefined,
+              where: resolvedLocationId
+                ? { locationId: resolvedLocationId }
+                : undefined,
               include: {
                 location: true,
               },
@@ -443,7 +480,6 @@ export async function GET(
       take: limit,
     });
 
-    // Transform products to include average rating and number of ratings
     const productsWithRatings = products.map((product) => {
       const ratings = product.reviews.map((review) => review.rating);
       const numberOfRatings = ratings.length;
@@ -452,7 +488,6 @@ export async function GET(
           ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
           : 0;
 
-      // Remove reviews from the response and add rating summary
       const { reviews, ...productWithoutReviews } = product;
       return {
         ...productWithoutReviews,
