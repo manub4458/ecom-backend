@@ -1,18 +1,30 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 export async function GET(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
   // Set CORS headers
+  const origin = request.headers.get("origin");
+
+  // Determine if the origin is allowed
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  // Set CORS headers
   const headers = {
-    "Access-Control-Allow-Origin":
-      process.env.NEXT_PUBLIC_FRONTEND_URL ||
-      "http://localhost:3000" ||
-      "https://favobliss.vercel.app",
+    "Access-Control-Allow-Origin": corsOrigin || "",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
   };
 
   // Handle preflight OPTIONS request
