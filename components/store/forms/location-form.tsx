@@ -43,13 +43,23 @@ export const LocationForm = ({ data }: LocationFormProps) => {
 
   const form = useForm<z.infer<typeof LocationFormSchema>>({
     resolver: zodResolver(LocationFormSchema),
-    defaultValues: data || {
-      pincode: "",
-      city: "",
-      state: "",
-      country: "",
-      isCodAvailable: false,
-    },
+    defaultValues: data
+      ? {
+          pincode: data.pincode,
+          city: data.city,
+          state: data.state,
+          country: data.country,
+          isCodAvailable: data.isCodAvailable,
+          deliveryDays: data.deliveryDays ?? 1,
+        }
+      : {
+          pincode: "",
+          city: "",
+          state: "",
+          country: "",
+          isCodAvailable: false,
+          deliveryDays: 1,
+        },
   });
 
   const onSubmit = async (values: z.infer<typeof LocationFormSchema>) => {
@@ -181,6 +191,26 @@ export const LocationForm = ({ data }: LocationFormProps) => {
                       {...field}
                       disabled={loading}
                       placeholder="Country name"
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="deliveryDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Days</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      disabled={loading}
+                      placeholder="Enter delivery days"
+                      min="1"
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />

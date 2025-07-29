@@ -81,6 +81,7 @@ model Location {
   state          String
   country        String
   isCodAvailable Boolean        @default(false)
+  deliveryDays   Int?           @default(1)
   variantPrices  VariantPrice[] @relation("LocationToVariantPrice")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt

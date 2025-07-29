@@ -8,7 +8,7 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    const { pincode, city, state, country, isCodAvailable } =
+    const { pincode, city, state, country, isCodAvailable, deliveryDays } =
       await request.json();
 
     if (!session || !session.user || !session.user.id) {
@@ -35,6 +35,10 @@ export async function PATCH(
       return new NextResponse("Cash on Delivery availability is required", {
         status: 400,
       });
+    }
+
+    if (!deliveryDays || deliveryDays.length === null) {
+      return new NextResponse("Delivery days are required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -65,6 +69,7 @@ export async function PATCH(
         state,
         country,
         isCodAvailable,
+        deliveryDays,
       },
     });
 

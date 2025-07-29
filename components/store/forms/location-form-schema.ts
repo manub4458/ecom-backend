@@ -16,4 +16,7 @@ export const LocationFormSchema = z.object({
   isCodAvailable: z.boolean({
     required_error: "Cash on Delivery availability is required",
   }),
+  deliveryDays: z.number().min(1, {
+    message: "Delivery days must be at least 1",
+  }),
 });

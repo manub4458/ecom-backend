@@ -7,7 +7,7 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { pincode, city, state, country, isCodAvailable } =
+    const { pincode, city, state, country, isCodAvailable, deliveryDays } =
       await request.json();
     const session = await auth();
 
@@ -36,6 +36,9 @@ export async function POST(
         status: 400,
       });
     }
+    if (!deliveryDays || deliveryDays.length === null) {
+      return new NextResponse("Delivery days are required", { status: 400 });
+    }
 
     if (!params.storeId) {
       return new NextResponse("StoreId is required", { status: 400 });
@@ -58,6 +61,7 @@ export async function POST(
         state,
         country,
         isCodAvailable,
+        deliveryDays,
         storeId: params.storeId,
       },
     });

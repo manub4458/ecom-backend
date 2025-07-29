@@ -201,6 +201,7 @@ export type LocationColumn = {
   country: string;
   createdAt: string;
   isCodAvailable: boolean;
+  deliveryDays: number;
 };
 
 export const locationColumns: ColumnDef<LocationColumn>[] = [
@@ -219,6 +220,10 @@ export const locationColumns: ColumnDef<LocationColumn>[] = [
   {
     accessorKey: "country",
     header: "Country",
+  },
+  {
+    accessorKey: "deliveryDays",
+    header: "Delivery Days",
   },
   {
     accessorKey: "isCodAvailable",
