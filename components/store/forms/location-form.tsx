@@ -22,6 +22,7 @@ import { Header } from "@/components/store/utils/header";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { LocationFormSchema } from "./location-form-schema";
 
@@ -47,6 +48,7 @@ export const LocationForm = ({ data }: LocationFormProps) => {
       city: "",
       state: "",
       country: "",
+      isCodAvailable: false,
     },
   });
 
@@ -181,6 +183,28 @@ export const LocationForm = ({ data }: LocationFormProps) => {
                       placeholder="Country name"
                     />
                   </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isCodAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={loading}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Cash on Delivery</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Enable Cash on Delivery for this location
+                    </p>
+                  </div>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}

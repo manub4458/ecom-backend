@@ -13,4 +13,7 @@ export const LocationFormSchema = z.object({
   country: z.string().min(1, {
     message: "Country is required",
   }),
+  isCodAvailable: z.boolean({
+    required_error: "Cash on Delivery availability is required",
+  }),
 });
