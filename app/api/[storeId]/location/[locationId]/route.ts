@@ -8,7 +8,8 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    const { pincode, city, state, country } = await request.json();
+    const { pincode, city, state, country, isCodAvailable } =
+      await request.json();
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -28,6 +29,12 @@ export async function PATCH(
 
     if (!country) {
       return new NextResponse("Country is required", { status: 400 });
+    }
+
+    if (isCodAvailable === undefined || isCodAvailable === null) {
+      return new NextResponse("Cash on Delivery availability is required", {
+        status: 400,
+      });
     }
 
     if (!params.storeId) {
@@ -57,6 +64,7 @@ export async function PATCH(
         city,
         state,
         country,
+        isCodAvailable,
       },
     });
 
@@ -66,7 +74,6 @@ export async function PATCH(
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
-
 export async function DELETE(
   _request: Request,
   { params }: { params: { storeId: string; locationId: string } }

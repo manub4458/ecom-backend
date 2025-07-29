@@ -200,6 +200,7 @@ export type LocationColumn = {
   state: string;
   country: string;
   createdAt: string;
+  isCodAvailable: boolean;
 };
 
 export const locationColumns: ColumnDef<LocationColumn>[] = [
@@ -218,6 +219,11 @@ export const locationColumns: ColumnDef<LocationColumn>[] = [
   {
     accessorKey: "country",
     header: "Country",
+  },
+  {
+    accessorKey: "isCodAvailable",
+    header: "COD Available",
+    cell: ({ row }) => (row.original.isCodAvailable ? "Yes" : "No"),
   },
   {
     accessorKey: "createdAt",

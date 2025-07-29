@@ -57,7 +57,7 @@ export async function POST(
         city,
         state,
         country,
-        // isCodAvailable,
+        isCodAvailable,
         storeId: params.storeId,
       },
     });
