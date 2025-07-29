@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { ReviewSchema } from "@/schemas/review-form-schema";
 import { NextResponse } from "next/server";
 
 export async function DELETE(
@@ -18,9 +17,9 @@ export async function DELETE(
   };
 
   // Handle preflight OPTIONS request
-  // if (request.method === "OPTIONS") {
-  //   return new NextResponse(null, { status: 204, headers });
-  // }
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
 
   try {
     if (!params.productId) {
@@ -55,6 +54,7 @@ export async function DELETE(
       },
       include: {
         images: true,
+        videos: true,
       },
     });
 

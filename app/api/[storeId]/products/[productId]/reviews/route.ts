@@ -33,7 +33,14 @@ export async function POST(
       );
     }
 
-    const { userName, rating, text, images, userId } = validatedData.data;
+    const {
+      userName,
+      rating,
+      text,
+      images = [],
+      videos = [],
+      userId,
+    } = validatedData.data;
 
     if (!params.productId) {
       return new NextResponse("Product ID is required", {
@@ -63,9 +70,13 @@ export async function POST(
         images: {
           create: images.map((url) => ({ url })),
         },
+        videos: {
+          create: videos.map((url) => ({ url })),
+        },
       },
       include: {
         images: true,
+        videos: true,
         product: {
           select: {
             id: true,
@@ -122,6 +133,7 @@ export async function GET(
       },
       include: {
         images: true,
+        videos: true,
         product: {
           select: {
             id: true,

@@ -274,6 +274,7 @@ model Review {
   rating    Int
   text      String
   images    ReviewImage[] @relation("ReviewToReviewImage")
+  videos    ReviewVideo[] @relation("ReviewToReviewVideo")
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
@@ -284,6 +285,17 @@ model ReviewImage {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   reviewId  String   @db.ObjectId
   review    Review   @relation("ReviewToReviewImage", fields: [reviewId], references: [id], onDelete: Cascade)
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reviewId])
+}
+
+model ReviewVideo {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  reviewId  String   @db.ObjectId
+  review    Review   @relation("ReviewToReviewVideo", fields: [reviewId], references: [id], onDelete: Cascade)
   url       String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

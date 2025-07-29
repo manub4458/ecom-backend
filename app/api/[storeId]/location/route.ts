@@ -7,7 +7,8 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { pincode, city, state, country } = await request.json();
+    const { pincode, city, state, country, isCodAvailable } =
+      await request.json();
     const session = await auth();
 
     if (!session) {
@@ -30,6 +31,12 @@ export async function POST(
       return new NextResponse("Country is required", { status: 400 });
     }
 
+    if (isCodAvailable === undefined || isCodAvailable === null) {
+      return new NextResponse("Cash on Delivery availability is required", {
+        status: 400,
+      });
+    }
+
     if (!params.storeId) {
       return new NextResponse("StoreId is required", { status: 400 });
     }
@@ -50,6 +57,7 @@ export async function POST(
         city,
         state,
         country,
+        // isCodAvailable,
         storeId: params.storeId,
       },
     });

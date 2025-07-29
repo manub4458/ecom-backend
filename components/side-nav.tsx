@@ -1,5 +1,4 @@
 "use client";
-
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -21,7 +20,7 @@ import {
   Clipboard,
 } from "lucide-react";
 
-export const SubNav = ({
+export const SideNav = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLElement>) => {
@@ -119,12 +118,7 @@ export const SubNav = ({
   );
 
   return (
-    <nav
-      className={cn(
-        "flex flex-col space-y-2 md:space-y-0 md:flex-row md:items-center md:space-x-4 lg:space-x-6 overflow-x-auto max-w-[78vw] scrollbar-thin p-3",
-        className
-      )}
-    >
+    <nav className={cn("space-y-1 px-2", className)} {...props}>
       {routes.map((route) => {
         const Icon = route.icon;
         return (
@@ -132,15 +126,18 @@ export const SubNav = ({
             key={route.href}
             href={route.href}
             className={cn(
-              "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md group whitespace-nowrap",
+              "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-md transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800 group relative",
               route.active
                 ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
                 : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             )}
           >
+            {route.active && (
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 dark:bg-blue-400 rounded-r-md" />
+            )}
             <Icon
               className={cn(
-                "h-4 w-4 transition-colors flex-shrink-0",
+                "h-5 w-5 transition-colors flex-shrink-0",
                 route.active
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300"

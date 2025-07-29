@@ -9,5 +9,6 @@ export const ReviewSchema = z.object({
     .max(5, "Rating cannot exceed 5"),
   text: z.string().min(1, "Review text is required"),
   images: z.array(z.string().url("Invalid image URL")).optional().default([]),
+  videos: z.array(z.string().url("Invalid video URL")).optional().default([]),
   userId: z.string().min(1, "User ID is required"),
 });
