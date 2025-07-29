@@ -1,20 +1,26 @@
 import * as z from "zod";
 
-// product-form-schema.ts
 export const VariantSchema = z.object({
   id: z.string().optional(),
   sizeId: z
     .string()
     .nullable()
     .optional()
-    .transform((val) => (val === "" ? null : val)), // Convert empty string to null
+    .transform((val) => (val === "" ? null : val)),
   colorId: z
     .string()
     .nullable()
     .optional()
-    .transform((val) => (val === "" ? null : val)), // Convert empty string to null
+    .transform((val) => (val === "" ? null : val)),
   stock: z.number().min(0, "Stock must be non-negative"),
-  images: z.array(z.string().url()).min(1, "At least one image is required"),
+  media: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        mediaType: z.enum(["IMAGE", "VIDEO"]).default("IMAGE"),
+      })
+    )
+    .min(1, "At least one media item is required"),
   sku: z.string().optional(),
   variantPrices: z
     .array(
@@ -37,7 +43,6 @@ export const ProductSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug must contain only lowercase letters, numbers, and hyphens"
     ),
-  // brand: z.string().optional(),
   brandId: z.string().nullable().optional(),
   about: z.string().optional(),
   description: z.string().min(1, "Description is required"),
