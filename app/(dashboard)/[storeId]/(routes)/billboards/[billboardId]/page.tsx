@@ -1,28 +1,35 @@
-import { BillboardForm } from "@/components/store/forms/billboard-form";
-import { db } from "@/lib/db";
+// import { BillboardForm } from "@/components/store/forms/billboard-form";
+// import { db } from "@/lib/db";
 
+// const BillboardPage = async(
+//     { params } : { params : { billboardId : string }}
+// ) => {
 
-const BillboardPage = async(
-    { params } : { params : { billboardId : string }}
-) => {
+//     let billboard = null
 
-    let billboard = null
+//     if (params.billboardId !== "create") {
+//         billboard = await db.billBoard.findUnique({
+//             where : {
+//                 id : params.billboardId
+//             }
+//         });
+//     }
 
-    if (params.billboardId !== "create") {
-        billboard = await db.billBoard.findUnique({
-            where : {
-                id : params.billboardId
-            }
-        });
-    }
+//     return (
+//         <div className="flex flex-col">
+//             <div className="flex-1 space-y-4 p-8 pt-6">
+//                 <BillboardForm data ={billboard} />
+//             </div>
+//         </div>
+//     )
+// }
 
-    return (
-        <div className="flex flex-col">
-            <div className="flex-1 space-y-4 p-8 pt-6">
-                <BillboardForm data ={billboard} />
-            </div>
-        </div>
-    )
-}
+// export default BillboardPage;
 
-export default BillboardPage;
+import React from "react";
+
+const page = () => {
+  return <div>page</div>;
+};
+
+export default page;

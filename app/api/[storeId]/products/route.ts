@@ -7,7 +7,6 @@ export async function POST(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
-  // Unchanged POST endpoint
   try {
     const session = await auth();
     const body = await request.json();
@@ -38,6 +37,10 @@ export async function POST(
       subCategoryId,
       variants,
       specifications,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      openGraphImage,
     } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -168,6 +171,10 @@ export async function POST(
         categoryId,
         subCategoryId,
         storeId: params.storeId,
+        metaTitle,
+        metaDescription,
+        metaKeywords,
+        openGraphImage,
         variants: {
           create: variants.map((variant) => ({
             stock: variant.stock,
@@ -233,7 +240,6 @@ export async function GET(
     "Access-Control-Allow-Headers": "Content-Type",
   };
 
-  // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { status: 204, headers });
   }
@@ -254,9 +260,9 @@ export async function GET(
     const limit = parseInt(searchParams.get("limit") || "12");
     const price = searchParams.get("price");
     const locationId = searchParams.get("locationId");
-    const pincode = searchParams.get("pincode"); // Added pincode parameter
+    const pincode = searchParams.get("pincode");
     const isFeatured = searchParams.get("isFeatured");
-    const variantIds = searchParams.get("variantIds")?.split(","); // Added variantIds parameter
+    const variantIds = searchParams.get("variantIds")?.split(",");
 
     console.log("Received filters:", {
       slug,
@@ -274,7 +280,6 @@ export async function GET(
       variantIds,
     });
 
-    // Resolve locationId from pincode if provided
     let resolvedLocationId = locationId;
     if (pincode && !locationId) {
       const location = await db.location.findUnique({
@@ -300,7 +305,6 @@ export async function GET(
           subCategory: {
             include: {
               parent: true,
-              billboard: true,
             },
           },
           variants: {
@@ -440,7 +444,6 @@ export async function GET(
         subCategory: {
           include: {
             parent: true,
-            billboard: true,
           },
         },
         variants: {

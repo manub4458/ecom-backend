@@ -34,7 +34,7 @@ export async function POST(
       return new NextResponse("Invalid data provided", { status: 400 });
     }
 
-    const { name, slug, billboardId, bannerImage, categoryId, parentId } =
+    const { name, slug, bannerImage, categoryId, parentId, icon } =
       validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -78,7 +78,7 @@ export async function POST(
       data: {
         name,
         slug,
-        billboardId,
+        icon,
         bannerImage,
         categoryId,
         parentId,
@@ -110,7 +110,6 @@ export async function GET(
         storeId: params.storeId,
       },
       include: {
-        billboard: true,
         category: true,
         parent: true,
         childSubCategories: true,

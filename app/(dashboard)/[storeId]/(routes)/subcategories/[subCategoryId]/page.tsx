@@ -28,12 +28,6 @@ const SubCategoryPage = async ({
     },
   });
 
-  const billboards = await db.billBoard.findMany({
-    where: {
-      storeId: params.storeId,
-    },
-  });
-
   const subCategories = await db.subCategory.findMany({
     where: {
       storeId: params.storeId,
@@ -46,7 +40,6 @@ const SubCategoryPage = async ({
         <SubCategoryForm
           initialData={subCategory}
           categories={categories}
-          billboards={billboards}
           subCategories={subCategories}
         />
       </div>

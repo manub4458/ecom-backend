@@ -12,10 +12,8 @@ export const CategoryFormSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug must contain only lowercase letters, numbers, and hyphens"
     ),
-  billboardId: z.string().min(1, {
-    message: "Billboard is required",
-  }),
   bannerImage: z.string().min(1, {
     message: "Banner Image is required",
   }),
+  landingPageBanner: z.string().optional(),
 });

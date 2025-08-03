@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImageUpload } from "@/components/store/utils/image-upload";
+import { toast } from "sonner";
 
 interface VariantFormProps {
   value: Array<{
@@ -49,7 +50,29 @@ export default function VariantForm({
 }: VariantFormProps) {
   const [loading, setLoading] = useState(false);
 
+  // Find the location with pincode 110040
+  const requiredLocation = locations.find((loc) => loc.pincode === "110040");
+
+  // Validate that all variants have a price for pincode 110040
+  const validateVariants = () => {
+    if (!requiredLocation) {
+      toast.error("Required location with pincode 110040 not found.");
+      return false;
+    }
+    return value.every((variant) =>
+      variant.variantPrices.some(
+        (price) => price.locationId === requiredLocation.id
+      )
+    );
+  };
+
   const addVariant = () => {
+    if (!requiredLocation) {
+      toast.error(
+        "Cannot add variant: Location with pincode 110040 not found."
+      );
+      return;
+    }
     onChange([
       ...value,
       {
@@ -58,7 +81,13 @@ export default function VariantForm({
         sku: "",
         sizeId: null,
         colorId: null,
-        variantPrices: [],
+        variantPrices: [
+          {
+            locationId: requiredLocation.id,
+            price: 0,
+            mrp: 0,
+          },
+        ],
       },
     ]);
   };
@@ -85,6 +114,11 @@ export default function VariantForm({
 
   const removePrice = (variantIndex: number, priceIndex: number) => {
     const newVariants = [...value];
+    const priceToRemove = newVariants[variantIndex].variantPrices[priceIndex];
+    if (requiredLocation && priceToRemove.locationId === requiredLocation.id) {
+      toast.error("Cannot remove price for required pincode 110040.");
+      return;
+    }
     newVariants[variantIndex].variantPrices = newVariants[
       variantIndex
     ].variantPrices.filter((_, i) => i !== priceIndex);
@@ -200,6 +234,13 @@ export default function VariantForm({
                   Add Price
                 </Button>
               </div>
+              {!variant.variantPrices.some(
+                (price) => price.locationId === requiredLocation?.id
+              ) && (
+                <p className="text-destructive text-sm mb-2">
+                  Price for pincode 110040 is required.
+                </p>
+              )}
               {variant.variantPrices.map((price, priceIndex) => (
                 <div
                   key={priceIndex}
@@ -211,12 +252,26 @@ export default function VariantForm({
                     </label>
                     <Select
                       disabled={loading}
-                      onValueChange={(val) =>
+                      onValueChange={(val) => {
+                        if (
+                          requiredLocation &&
+                          variant.variantPrices.some(
+                            (p, i) =>
+                              i !== priceIndex &&
+                              p.locationId === requiredLocation.id
+                          ) &&
+                          val === requiredLocation.id
+                        ) {
+                          toast.error(
+                            "Price for pincode 110040 already exists in this variant."
+                          );
+                          return;
+                        }
                         updatePrice(variantIndex, priceIndex, {
                           ...price,
                           locationId: val,
-                        })
-                      }
+                        });
+                      }}
                       value={price.locationId}
                     >
                       <SelectTrigger>
@@ -271,7 +326,11 @@ export default function VariantForm({
                     variant="destructive"
                     size="sm"
                     onClick={() => removePrice(variantIndex, priceIndex)}
-                    disabled={loading}
+                    disabled={
+                      loading ||
+                      (requiredLocation &&
+                        price.locationId === requiredLocation.id)
+                    }
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -301,7 +360,7 @@ export default function VariantForm({
         type="button"
         variant="outline"
         onClick={addVariant}
-        disabled={loading}
+        disabled={loading || !requiredLocation}
       >
         Add Variant
       </Button>

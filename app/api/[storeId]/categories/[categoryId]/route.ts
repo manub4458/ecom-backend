@@ -16,7 +16,7 @@ export async function PATCH(
       return new NextResponse("Invalid data provided", { status: 400 });
     }
 
-    const { name, slug, billboardId, bannerImage } = validatedData.data;
+    const { name, slug, bannerImage, landingPageBanner } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -47,7 +47,7 @@ export async function PATCH(
       data: {
         name,
         slug,
-        billboardId,
+        landingPageBanner,
         bannerImage,
       },
     });
@@ -130,9 +130,6 @@ export async function GET(
     const category = await db.category.findUnique({
       where: {
         id: params.categoryId,
-      },
-      include: {
-        billboard: true,
       },
     });
 

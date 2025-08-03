@@ -2,7 +2,7 @@
 
 import * as z from "zod";
 import { useState, useEffect } from "react";
-import { SubCategory, Category, BillBoard } from "@prisma/client";
+import { SubCategory, Category } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import { toast } from "sonner";
@@ -39,14 +39,12 @@ import { SingleImageUpload } from "../utils/single-image-upload";
 interface SubCategoryFormProps {
   initialData: SubCategory | null;
   categories: Category[];
-  billboards: BillBoard[];
   subCategories: SubCategory[];
 }
 
 export const SubCategoryForm = ({
   initialData,
   categories,
-  billboards,
   subCategories,
 }: SubCategoryFormProps) => {
   const [open, setOpen] = useState(false);
@@ -69,15 +67,15 @@ export const SubCategoryForm = ({
       ? {
           name: initialData.name,
           slug: initialData.slug || "",
-          billboardId: initialData.billboardId,
           bannerImage: initialData.bannerImage,
+          icon: initialData.icon || "",
           categoryId: initialData.categoryId,
           parentId: initialData.parentId || undefined,
         }
       : {
           name: "",
           slug: "",
-          billboardId: "",
+          icon: "",
           bannerImage: "",
           categoryId: "",
           parentId: undefined,
@@ -229,38 +227,6 @@ export const SubCategoryForm = ({
             />
             <FormField
               control={form.control}
-              name="billboardId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Billboard</FormLabel>
-                  <Select
-                    disabled={loading}
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          defaultValue={field.value}
-                          placeholder="Select a billboard"
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {billboards.map((billboard) => (
-                        <SelectItem key={billboard.id} value={billboard.id}>
-                          {billboard.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="categoryId"
               render={({ field }) => (
                 <FormItem>
@@ -355,6 +321,24 @@ export const SubCategoryForm = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Banner image</FormLabel>
+                  <FormControl>
+                    <SingleImageUpload
+                      value={field.value || ""}
+                      disabled={loading}
+                      onChange={(url) => field.onChange(url)}
+                      onRemove={() => field.onChange("")}
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="icon"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Icon</FormLabel>
                   <FormControl>
                     <SingleImageUpload
                       value={field.value || ""}

@@ -50,8 +50,6 @@ import { ProductSchema } from "@/schemas/product-form-schema";
 import { Switch } from "@/components/ui/switch";
 import Editor from "./editor";
 import VariantForm from "./variant-form";
-// import Editor from "@/components/store/utils/editor";
-// import VariantForm from "@/components/store/utils/variant-form";
 
 const getSubCategoryName = (
   subCategory: SubCategory,
@@ -132,6 +130,10 @@ export const ProductForm = ({
             images: v.images.map((img: any) => img.url),
             variantPrices: v.variantPrices || [],
           })),
+          metaTitle: data.metaTitle || "",
+          metaDescription: data.metaDescription || "",
+          metaKeywords: data.metaKeywords || [],
+          openGraphImage: data.openGraphImage || "",
         }
       : {
           name: "",
@@ -160,10 +162,29 @@ export const ProductForm = ({
               variantPrices: [],
             },
           ],
+          metaTitle: "",
+          metaDescription: "",
+          metaKeywords: [],
+          openGraphImage: "",
         },
   });
 
   const onSubmit = async (values: z.infer<typeof ProductSchema>) => {
+    const requiredLocation = locations.find((loc) => loc.pincode === "110040");
+    if (!requiredLocation) {
+      toast.error("Required location with pincode 110040 not found.");
+      return;
+    }
+    const hasRequiredPincode = values.variants.every((variant) =>
+      variant.variantPrices.some(
+        (price) => price.locationId === requiredLocation.id
+      )
+    );
+    if (!hasRequiredPincode) {
+      toast.error("All variants must include a price for pincode 110040.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -451,6 +472,66 @@ export const ProductForm = ({
             />
             <FormField
               control={form.control}
+              name="metaTitle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Meta Title</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="SEO meta title (max 60 characters)"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs text-muted-foreground">
+                    The meta title for SEO, up to 60 characters.
+                  </FormDescription>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="metaDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Meta Description</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="SEO meta description (max 160 characters)"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs text-muted-foreground">
+                    The meta description for SEO, up to 160 characters.
+                  </FormDescription>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="openGraphImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Open Graph Image URL</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="URL for Open Graph image"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs text-muted-foreground">
+                    The URL of the image used for social media sharing.
+                  </FormDescription>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="expressDelivery"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
@@ -499,7 +580,7 @@ export const ProductForm = ({
                   <div className="space-y-1 leading-none">
                     <FormLabel>Featured</FormLabel>
                     <FormDescription>
-                      This product will appear on the as favobliss choice
+                      This product will appear as Favobliss choice
                     </FormDescription>
                   </div>
                   <FormControl>
@@ -518,7 +599,7 @@ export const ProductForm = ({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Archieved</FormLabel>
+                    <FormLabel>Archived</FormLabel>
                     <FormDescription>
                       This product will not be visible to customers
                     </FormDescription>
@@ -535,6 +616,33 @@ export const ProductForm = ({
             />
           </div>
           <FormField
+            control={form.control}
+            name="metaKeywords"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Meta Keywords</FormLabel>
+                <FormControl>
+                  <ProductFeatures
+                    value={field.value || []}
+                    disabled={loading}
+                    onChange={(value) =>
+                      field.onChange([...(field.value || []), value])
+                    }
+                    onRemove={(value) =>
+                      field.onChange(
+                        (field.value || []).filter((data) => data !== value)
+                      )
+                    }
+                  />
+                </FormControl>
+                <FormDescription className="text-xs text-muted-foreground">
+                  Keywords for SEO, separated by commas.
+                </FormDescription>
+                <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+              </FormItem>
+            )}
+          />
+          {/* <FormField
             control={form.control}
             name="sizeAndFit"
             render={({ field }) => (
@@ -557,7 +665,7 @@ export const ProductForm = ({
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
               </FormItem>
             )}
-          />
+          /> */}
           <FormField
             control={form.control}
             name="materialAndCare"

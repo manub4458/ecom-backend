@@ -1,4 +1,3 @@
-// app/(dashboard)/[storeId]/(routes)/categories/[categoryId]/page.tsx
 import { CategoryForm } from "@/components/store/forms/category-form";
 import { db } from "@/lib/db";
 
@@ -15,9 +14,6 @@ const CategoryPage = async ({
         where: {
           id: params.categoryId,
         },
-        include: {
-          billboard: true,
-        },
       });
     } catch (error) {
       console.error("[CATEGORY_PAGE] Error fetching category:", error);
@@ -25,16 +21,10 @@ const CategoryPage = async ({
     }
   }
 
-  const billboards = await db.billBoard.findMany({
-    where: {
-      storeId: params.storeId,
-    },
-  });
-
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
-        <CategoryForm data={category} billboards={billboards} />
+        <CategoryForm data={category} />
       </div>
     </div>
   );

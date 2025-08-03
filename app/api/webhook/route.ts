@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 import { db } from "@/lib/db";
+import { generateOrderNumber } from "@/lib/utils";
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -59,6 +60,14 @@ export async function POST(req: Request) {
       return new NextResponse(null, { status: 200 });
     }
 
+    let orderNumber: string;
+    try {
+      orderNumber = await generateOrderNumber();
+    } catch (error: any) {
+      console.error("Order number generation error:", error.message);
+      return new NextResponse(error.message, { status: 500 });
+    }
+
     let addressString = "";
     try {
       if (payment.notes?.address) {
@@ -90,6 +99,7 @@ export async function POST(req: Request) {
           isPaid: true,
           address: addressString || "No address provided",
           phone: payment.contact || "No phone provided",
+          orderNumber,
         },
         include: {
           orderItems: {

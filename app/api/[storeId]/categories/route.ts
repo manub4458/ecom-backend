@@ -16,7 +16,7 @@ export async function POST(
       return new NextResponse("Invalid data provided", { status: 400 });
     }
 
-    const { name, slug, billboardId, bannerImage } = validatedData.data;
+    const { name, slug, bannerImage, landingPageBanner } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -40,8 +40,8 @@ export async function POST(
       data: {
         name,
         slug,
-        billboardId,
         bannerImage,
+        landingPageBanner,
         storeId: params.storeId,
       },
     });
@@ -75,16 +75,12 @@ export async function GET(
           storeId: params.storeId,
         },
         include: {
-          billboard: true,
           subCategories: {
             include: {
-              billboard: true,
               childSubCategories: {
                 include: {
-                  billboard: true,
                   childSubCategories: {
                     include: {
-                      billboard: true,
                       childSubCategories: true,
                     },
                   },
@@ -107,16 +103,12 @@ export async function GET(
         storeId: params.storeId,
       },
       include: {
-        billboard: true,
         subCategories: {
           include: {
-            billboard: true,
             childSubCategories: {
               include: {
-                billboard: true,
                 childSubCategories: {
                   include: {
-                    billboard: true,
                     childSubCategories: true,
                   },
                 },

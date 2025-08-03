@@ -72,16 +72,16 @@ export async function GET(
         name: { contains: query, mode: "insensitive" },
       },
       include: {
-        billboard: true,
+        // billboard: true,
         subCategories: {
           include: {
-            billboard: true,
+            // billboard: true,
             childSubCategories: {
               include: {
-                billboard: true,
+                // billboard: true,
                 childSubCategories: {
                   include: {
-                    billboard: true,
+                    // billboard: true,
                     childSubCategories: true,
                   },
                 },
@@ -143,15 +143,15 @@ export async function GET(
         ],
       },
       include: {
-        billboard: true,
+        // billboard: true,
         category: true,
         parent: true,
         childSubCategories: {
           include: {
-            billboard: true,
+            // billboard: true,
             childSubCategories: {
               include: {
-                billboard: true,
+                // billboard: true,
                 childSubCategories: true,
               },
             },
@@ -189,7 +189,7 @@ export async function GET(
         subCategory: {
           include: {
             parent: true,
-            billboard: true,
+            // billboard: true,
           },
         },
         variants: {

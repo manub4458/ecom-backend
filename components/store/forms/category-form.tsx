@@ -4,7 +4,7 @@ import * as z from "zod";
 import axios from "axios";
 import { toast } from "sonner";
 import { useState } from "react";
-import { BillBoard, Category } from "@prisma/client";
+import { Category } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams, useRouter } from "next/navigation";
@@ -18,13 +18,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 import { Header } from "@/components/store/utils/header";
 import { Button } from "@/components/ui/button";
@@ -36,10 +29,9 @@ import { SingleImageUpload } from "../utils/single-image-upload";
 
 interface CategoryFormProps {
   data: Category | null;
-  billboards: BillBoard[];
 }
 
-export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
+export const CategoryForm = ({ data }: CategoryFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const params = useParams();
@@ -56,14 +48,14 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
       ? {
           name: data.name,
           slug: data.slug || "",
-          billboardId: data.billboardId,
           bannerImage: data.bannerImage,
+          landingPageBanner: data.landingPageBanner || "",
         }
       : {
           name: "",
           slug: "",
-          billboardId: "",
           bannerImage: "",
+          landingPageBanner: "",
         },
   });
 
@@ -181,23 +173,6 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
                 </FormItem>
               )}
             />
-            {/* <FormField
-              control={form.control}
-              name="bannerImage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Banner Image</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="Banner URL"
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            /> */}
 
             <FormField
               control={form.control}
@@ -218,6 +193,24 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
               )}
             />
             <FormField
+              control={form.control}
+              name="landingPageBanner"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Landing Banner Image</FormLabel>
+                  <FormControl>
+                    <SingleImageUpload
+                      value={field.value || ""}
+                      disabled={loading}
+                      onChange={(url) => field.onChange(url)}
+                      onRemove={() => field.onChange("")}
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            {/* <FormField
               control={form.control}
               name="billboardId"
               render={({ field }) => (
@@ -248,7 +241,7 @@ export const CategoryForm = ({ data, billboards }: CategoryFormProps) => {
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
-            />
+            /> */}
           </div>
           <Button type="submit" disabled={loading}>
             {actions}

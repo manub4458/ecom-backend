@@ -137,7 +137,7 @@ export async function GET(
         subCategory: {
           include: {
             parent: true,
-            billboard: true,
+            // billboard: true,
           },
         },
         variants: {

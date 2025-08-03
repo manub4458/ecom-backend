@@ -34,7 +34,7 @@ export async function PATCH(
       return new NextResponse("Invalid attributes", { status: 400 });
     }
 
-    const { name, slug, billboardId, bannerImage, categoryId, parentId } =
+    const { name, slug, icon, bannerImage, categoryId, parentId } =
       validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -89,7 +89,7 @@ export async function PATCH(
       data: {
         name,
         slug,
-        billboardId,
+        icon,
         bannerImage,
         categoryId,
         parentId,
@@ -168,7 +168,6 @@ export async function GET(
     const subCategory = await db.subCategory.findUnique({
       where: { id: params.subCategoryId },
       include: {
-        billboard: true,
         category: true,
         parent: true,
         childSubCategories: true,

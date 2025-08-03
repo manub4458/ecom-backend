@@ -18,6 +18,7 @@ import {
   Monitor,
   List,
   Clipboard,
+  Ticket,
 } from "lucide-react";
 
 export const SideNav = ({
@@ -96,17 +97,23 @@ export const SideNav = ({
         icon: Star,
       },
       {
+        href: `/${params.storeId}/coupons`,
+        label: "Coupons",
+        active: pathname === `/${params.storeId}/coupons`,
+        icon: Ticket,
+      },
+      {
         href: `/${params.storeId}/location`,
         label: "Locations",
         active: pathname === `/${params.storeId}/location`,
         icon: MapPin,
       },
-      {
-        href: `/${params.storeId}/billboards`,
-        label: "Billboards",
-        active: pathname === `/${params.storeId}/billboards`,
-        icon: Monitor,
-      },
+      // {
+      //   href: `/${params.storeId}/billboards`,
+      //   label: "Billboards",
+      //   active: pathname === `/${params.storeId}/billboards`,
+      //   icon: Monitor,
+      // },
       {
         href: `/${params.storeId}/settings`,
         label: "Settings",

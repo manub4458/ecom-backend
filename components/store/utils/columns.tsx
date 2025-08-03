@@ -10,6 +10,14 @@ import { SubCategoryCellActions } from "./subcategory-cell-actions";
 import { ReviewCellActions } from "./review-cell-actions";
 import { LocationCellActions } from "./location-cell-actions";
 import { BrandCellActions } from "./brand-cell-actions";
+import { CouponCellActions } from "./coupon-cell-actions";
+// import { copyToClipboard } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 export type Billboard = {
   id: string;
@@ -107,7 +115,6 @@ export const columns: ColumnDef<Billboard>[] = [
 export type CategoryColumn = {
   id: string;
   name: string;
-  billboardLabel: string;
   createdAt: string;
   subCategories?: { id: string; name: string; billboardLabel: string }[];
 };
@@ -116,10 +123,6 @@ export const categoryColumns: ColumnDef<CategoryColumn>[] = [
   {
     accessorKey: "name",
     header: "Name",
-  },
-  {
-    accessorKey: "billboardLabel",
-    header: "Billboard",
   },
   {
     accessorKey: "createdAt",
@@ -134,9 +137,8 @@ export const categoryColumns: ColumnDef<CategoryColumn>[] = [
 export type SubCategoryColumn = {
   id: string;
   name: string;
-  billboardLabel: string;
   categoryName: string;
-  parentName?: string; // Added for parent subcategory
+  parentName?: string;
   createdAt: string;
 };
 
@@ -144,10 +146,6 @@ export const subCategoryColumns: ColumnDef<SubCategoryColumn>[] = [
   {
     accessorKey: "name",
     header: "Name",
-  },
-  {
-    accessorKey: "billboardLabel",
-    header: "Billboard",
   },
   {
     accessorKey: "categoryName",
@@ -190,6 +188,82 @@ export const sizeColumns: ColumnDef<SizeColumn>[] = [
   {
     id: "actions",
     cell: ({ row }) => <SizeCellActions data={row.original} />,
+  },
+];
+
+export type CouponColumn = {
+  id: string;
+  code: string;
+  // type: string;
+  value: number;
+  startDate: string;
+  expiryDate: string;
+  productCount: number;
+  productNames: string[];
+  usagePerUser: number;
+  usedCount: number;
+  description: string;
+  createdAt: string;
+};
+
+export const couponColumns: ColumnDef<CouponColumn>[] = [
+  {
+    accessorKey: "code",
+    header: "Code",
+  },
+  {
+    accessorKey: "value",
+    header: "Value",
+  },
+  {
+    accessorKey: "startDate",
+    header: "Start Date",
+  },
+  {
+    accessorKey: "expiryDate",
+    header: "Expiry Date",
+  },
+  {
+    accessorKey: "productCount",
+    header: "Applicable Products",
+    cell: ({ row }) => (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="link" className="p-0 h-auto font-normal">
+            {row.original.productCount}{" "}
+            {row.original.productCount === 1 ? "product" : "products"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80">
+          <div className="space-y-2">
+            <h4 className="font-medium">Applicable Products</h4>
+            {row.original.productNames.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No products assigned
+              </p>
+            ) : (
+              <ul className="list-disc pl-5 text-sm">
+                {row.original.productNames.map((name, index) => (
+                  <li key={index}>{name}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    ),
+  },
+  {
+    accessorKey: "usagePerUser",
+    header: "Usage Per User",
+  },
+  {
+    accessorKey: "usedCount",
+    header: "Used Count",
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => <CouponCellActions data={row.original} />,
   },
 ];
 

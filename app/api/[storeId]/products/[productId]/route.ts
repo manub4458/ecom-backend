@@ -37,6 +37,10 @@ export async function PATCH(
       subCategoryId,
       variants,
       specifications,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      openGraphImage,
     } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -59,7 +63,6 @@ export async function PATCH(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Validate category
     const category = await db.category.findUnique({
       where: { id: categoryId },
     });
@@ -67,7 +70,6 @@ export async function PATCH(
       return new NextResponse("Invalid category", { status: 400 });
     }
 
-    // Validate subcategory if provided
     if (subCategoryId) {
       const subCategory = await db.subCategory.findUnique({
         where: { id: subCategoryId },
@@ -83,7 +85,6 @@ export async function PATCH(
       }
     }
 
-    // Validate brand if provided
     if (brandId) {
       const brand = await db.brand.findUnique({
         where: { id: brandId, storeId: params.storeId },
@@ -93,7 +94,6 @@ export async function PATCH(
       }
     }
 
-    // Validate specifications
     if (specifications && specifications.length > 0) {
       const specificationFieldIds = specifications.map(
         (spec) => spec.specificationFieldId
@@ -113,7 +113,6 @@ export async function PATCH(
       }
     }
 
-    // Validate variants and their prices
     for (const variant of variants) {
       if (variant.sizeId !== null && variant.sizeId) {
         const size = await db.size.findUnique({
@@ -132,7 +131,6 @@ export async function PATCH(
         }
       }
       if (variant.sku && !variant.id) {
-        // Only check SKU uniqueness for new variants (no id)
         const existingVariant = await db.variant.findFirst({
           where: {
             sku: variant.sku,
@@ -144,7 +142,6 @@ export async function PATCH(
           });
         }
       }
-      // Validate variant prices
       if (variant.variantPrices && variant.variantPrices.length > 0) {
         const locationIds = variant.variantPrices.map((vp) => vp.locationId);
         const locations = await db.location.findMany({
@@ -162,7 +159,6 @@ export async function PATCH(
       }
     }
 
-    // Update product
     const product = await db.product.update({
       where: { id: params.productId },
       data: {
@@ -181,8 +177,12 @@ export async function PATCH(
         isArchieved,
         categoryId,
         subCategoryId,
+        metaTitle,
+        metaDescription,
+        metaKeywords,
+        openGraphImage,
         productSpecifications: {
-          deleteMany: {}, // Remove existing specs
+          deleteMany: {},
           create: specifications?.map((spec) => ({
             specificationFieldId: spec.specificationFieldId,
             value: spec.value,
@@ -190,7 +190,7 @@ export async function PATCH(
         },
         variants: {
           upsert: variants.map((variant) => ({
-            where: { id: variant.id || "non-existent-id" }, // Use id if provided
+            where: { id: variant.id || "non-existent-id" },
             update: {
               stock: variant.stock,
               sku: variant.sku || undefined,
@@ -286,14 +286,11 @@ export async function DELETE(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    // Delete the product and its related data within a transaction
     const product = await db.$transaction(async (prisma) => {
-      // Delete product specifications
       await prisma.productSpecification.deleteMany({
         where: { productId: params.productId },
       });
 
-      // Delete the product (variants and order items will cascade)
       return await prisma.product.delete({
         where: { id: params.productId },
       });
@@ -337,7 +334,6 @@ export async function GET(
         subCategory: {
           include: {
             parent: true,
-            billboard: true,
           },
         },
         variants: {
@@ -383,7 +379,6 @@ export async function GET(
           subCategory: {
             include: {
               parent: true,
-              billboard: true,
             },
           },
           variants: {

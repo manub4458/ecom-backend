@@ -19,7 +19,6 @@ const SubCategoriesPage = async ({
       storeId: params.storeId,
     },
     include: {
-      billboard: true,
       category: true,
       parent: true,
     },
@@ -32,7 +31,6 @@ const SubCategoriesPage = async ({
     (item) => ({
       id: item.id,
       name: item.name,
-      billboardLabel: item.billboard.label,
       categoryName: item.category.name,
       parentName: item.parent?.name || "None",
       createdAt: format(item.createdAt, "MMMM do, yyyy"),

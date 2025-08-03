@@ -1,31 +1,41 @@
 import * as z from "zod";
 
-// product-form-schema.ts
-export const VariantSchema = z.object({
-  id: z.string().optional(),
-  sizeId: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((val) => (val === "" ? null : val)), // Convert empty string to null
-  colorId: z
-    .string()
-    .nullable()
-    .optional()
-    .transform((val) => (val === "" ? null : val)), // Convert empty string to null
-  stock: z.number().min(0, "Stock must be non-negative"),
-  images: z.array(z.string().url()).min(1, "At least one image is required"),
-  sku: z.string().optional(),
-  variantPrices: z
-    .array(
-      z.object({
-        locationId: z.string().min(1, "Location is required"),
-        price: z.number().min(0, "Price must be non-negative"),
-        mrp: z.number().min(0, "MRP must be non-negative"),
-      })
-    )
-    .min(1, "At least one price per location is required"),
-});
+export const VariantSchema = z
+  .object({
+    id: z.string().optional(),
+    sizeId: z
+      .string()
+      .nullable()
+      .optional()
+      .transform((val) => (val === "" ? null : val)),
+    colorId: z
+      .string()
+      .nullable()
+      .optional()
+      .transform((val) => (val === "" ? null : val)),
+    stock: z.number().min(0, "Stock must be non-negative"),
+    images: z.array(z.string().url()).min(1, "At least one image is required"),
+    sku: z.string().optional(),
+    variantPrices: z
+      .array(
+        z.object({
+          locationId: z.string().min(1, "Location is required"),
+          price: z.number().min(0, "Price must be non-negative"),
+          mrp: z.number().min(0, "MRP must be non-negative"),
+        })
+      )
+      .min(1, "At least one price per location is required"),
+  })
+  .refine(
+    (data) => {
+      return data.variantPrices.length > 0;
+    },
+    {
+      message:
+        "Each variant must include a price for the location with pincode 110040",
+      path: ["variantPrices"],
+    }
+  );
 
 export const ProductSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -37,7 +47,6 @@ export const ProductSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug must contain only lowercase letters, numbers, and hyphens"
     ),
-  // brand: z.string().optional(),
   brandId: z.string().nullable().optional(),
   about: z.string().optional(),
   description: z.string().min(1, "Description is required"),
@@ -62,4 +71,14 @@ export const ProductSchema = z.object({
       })
     )
     .optional(),
+  metaTitle: z
+    .string()
+    .max(60, "Meta title must be at most 60 characters")
+    .optional(),
+  metaDescription: z
+    .string()
+    .max(160, "Meta description must be at most 160 characters")
+    .optional(),
+  metaKeywords: z.array(z.string()).optional(),
+  openGraphImage: z.string().optional(),
 });
