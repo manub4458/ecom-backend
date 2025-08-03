@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { NextResponse } from "next/server";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 export async function POST(
   request: Request,
   { params }: { params: { storeId: string } }
@@ -243,14 +249,19 @@ export async function GET(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
+  const origin = request.headers.get("origin");
+
+  // Determine if the origin is allowed
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  // Set CORS headers
   const headers = {
-    "Access-Control-Allow-Origin":
-      process.env.NEXT_PUBLIC_FRONTEND_URL ||
-      "http://localhost:3000" ||
-      "http://localhost:3001" ||
-      "https://favobliss.vercel.app",
-    "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
+    "Access-Control-Allow-Origin": corsOrigin || "",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
   };
 
   if (request.method === "OPTIONS") {
