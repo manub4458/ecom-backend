@@ -105,6 +105,37 @@ export async function GET(
       return new NextResponse("Store Id is required", { status: 400 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get("slug");
+
+    if (slug) {
+      const subCategory = await db.subCategory.findUnique({
+        where: {
+          slug,
+          storeId: params.storeId,
+        },
+        include: {
+          category: true,
+          parent: true,
+          childSubCategories: {
+            include: {
+              childSubCategories: {
+                include: {
+                  childSubCategories: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!subCategory) {
+        return new NextResponse("SubCategory not found", { status: 404 });
+      }
+
+      return NextResponse.json(subCategory);
+    }
+
     const subCategories = await db.subCategory.findMany({
       where: {
         storeId: params.storeId,
@@ -112,11 +143,32 @@ export async function GET(
       include: {
         category: true,
         parent: true,
-        childSubCategories: true,
+        childSubCategories: {
+          include: {
+            childSubCategories: {
+              include: {
+                childSubCategories: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(subCategories);
+    const transformedSubCategories = subCategories
+      .filter((sub) => sub.parentId === null)
+      .map((sub) => ({
+        ...sub,
+        childSubCategories: sub.childSubCategories.map((child) => ({
+          ...child,
+          childSubCategories: child.childSubCategories.map((grandchild) => ({
+            ...grandchild,
+            childSubCategories: grandchild.childSubCategories || [],
+          })),
+        })),
+      }));
+
+    return NextResponse.json(transformedSubCategories);
   } catch (error) {
     console.log("[SUBCATEGORIES_GET]", error);
     return new NextResponse("Internal server error", { status: 500 });
