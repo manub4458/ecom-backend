@@ -21,6 +21,7 @@ export async function POST(
     const {
       products,
       orderId,
+      discount = 0, // Add discount to request body with default value of 0
     }: {
       products: {
         id: string;
@@ -29,6 +30,7 @@ export async function POST(
         locationId?: string | null;
       }[];
       orderId: string;
+      discount: number;
     } = await request.json();
 
     if (!products || products.length === 0) {
@@ -94,25 +96,29 @@ export async function POST(
       });
     }
 
+    // Apply discount (in paise)
+    const discountedAmount = Math.max(0, totalAmount - discount * 100);
+
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID!,
       key_secret: process.env.RAZORPAY_KEY_SECRET!,
     });
 
     const razorCheckout = await razorpay.orders.create({
-      amount: totalAmount,
+      amount: discountedAmount, // Use discounted amount
       currency: "INR",
       receipt: orderId,
       notes: {
         id: orderId,
-        locationIds: JSON.stringify(products.map((p) => p.locationId)), // Include locationIds
+        locationIds: JSON.stringify(products.map((p) => p.locationId)),
+        discount: discount.toString(), // Optionally include discount in notes for reference
       },
     });
 
     return NextResponse.json(
       {
         orderId: razorCheckout.id,
-        amount: totalAmount,
+        amount: discountedAmount, // Return discounted amount
         currency: "INR",
         key: process.env.RAZORPAY_KEY_ID!,
       },
