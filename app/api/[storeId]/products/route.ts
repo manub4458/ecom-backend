@@ -252,6 +252,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");
     const categoryId = searchParams.get("categoryId");
+    const subCategoryId = searchParams.get("subCategoryId");
     const brandId = searchParams.get("brandId");
     const colorId = searchParams.get("colorId");
     const sizeId = searchParams.get("sizeId");
@@ -267,6 +268,7 @@ export async function GET(
     console.log("Received filters:", {
       slug,
       categoryId,
+      subCategoryId,
       brandId,
       colorId,
       sizeId,
@@ -286,10 +288,35 @@ export async function GET(
         where: { pincode, storeId: params.storeId },
       });
       if (!location) {
-        console.log("invalid pincode", pincode);
+        console.log("Invalid pincode", pincode);
         return new NextResponse("Invalid pincode", { status: 404, headers });
       }
       resolvedLocationId = location.id;
+    }
+
+    // Validate subCategoryId if provided
+    if (subCategoryId) {
+      const subCategory = await db.subCategory.findUnique({
+        where: { id: subCategoryId, storeId: params.storeId },
+      });
+      if (!subCategory) {
+        console.log("Invalid subCategoryId", subCategoryId);
+        return new NextResponse("Invalid subcategory ID", {
+          status: 404,
+          headers,
+        });
+      }
+      // Optionally, ensure subCategory belongs to categoryId if both are provided
+      if (categoryId && subCategory.categoryId !== categoryId) {
+        console.log("Subcategory does not belong to specified category", {
+          subCategoryId,
+          categoryId,
+        });
+        return new NextResponse(
+          "Subcategory does not belong to specified category",
+          { status: 400, headers }
+        );
+      }
     }
 
     if (slug) {
@@ -367,6 +394,10 @@ export async function GET(
 
     if (categoryId) {
       where.categoryId = categoryId;
+    }
+
+    if (subCategoryId) {
+      where.subCategoryId = subCategoryId;
     }
 
     if (brandId) {
@@ -500,7 +531,7 @@ export async function GET(
     });
 
     console.log(
-      `Found ${products.length} products for storeId: ${params.storeId}, brandId: ${brandId}, categoryId: ${categoryId},`
+      `Found ${products.length} products for storeId: ${params.storeId}, brandId: ${brandId}, categoryId: ${categoryId}, subCategoryId: ${subCategoryId}`
     );
 
     return NextResponse.json(productsWithRatings, { headers });

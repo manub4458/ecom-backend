@@ -65,7 +65,6 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     },
   });
 
-  // Fetch the first location for price display (or adjust to use a specific location)
   const defaultLocation = await db.location.findFirst({
     where: {
       storeId: params.storeId,
