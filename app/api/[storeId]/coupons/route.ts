@@ -115,7 +115,9 @@ export async function GET(
 ) {
   try {
     if (!params.storeId) {
-      return new NextResponse("Store ID is required", { status: 400 });
+      const response = new NextResponse("Store ID is required", { status: 400 });
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      return response;
     }
 
     const coupons = await db.coupon.findMany({
@@ -131,9 +133,13 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(coupons);
+    const response = NextResponse.json(coupons);
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    return response;
   } catch (error) {
     console.log("COUPON GET", error);
-    return new NextResponse("Internal server error", { status: 500 });
+    const response = new NextResponse("Internal server error", { status: 500 });
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    return response;
   }
 }
