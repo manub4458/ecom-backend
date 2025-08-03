@@ -11,7 +11,7 @@ export async function PATCH(
     const session = await auth();
     const {
       code,
-      type,
+      isActive,
       value,
       startDate,
       expiryDate,
@@ -72,6 +72,7 @@ export async function PATCH(
       },
       data: {
         code,
+        isActive,
         value,
         startDate: startDate ? new Date(startDate) : undefined,
         expiryDate: expiryDate ? new Date(expiryDate) : undefined,

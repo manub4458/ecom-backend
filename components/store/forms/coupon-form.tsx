@@ -11,6 +11,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -44,6 +45,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 interface CouponFormProps {
   data: (Coupon & { products: { product: Product }[] }) | null;
@@ -67,6 +69,7 @@ export const CouponForm = ({ data, products }: CouponFormProps) => {
     defaultValues: data
       ? {
           code: data.code,
+          isActive: data.isActive,
           value: data.value,
           startDate: data.startDate.toISOString().split("T")[0],
           expiryDate: data.expiryDate.toISOString().split("T")[0],
@@ -77,6 +80,7 @@ export const CouponForm = ({ data, products }: CouponFormProps) => {
         }
       : {
           code: "",
+          isActive: true,
           value: 0,
           startDate: "",
           expiryDate: "",
@@ -336,6 +340,27 @@ export const CouponForm = ({ data, products }: CouponFormProps) => {
                       {...field}
                       disabled={loading}
                       placeholder="Coupon description"
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Active</FormLabel>
+                    <FormDescription>
+                      Toggle to activate or deactivate the coupon.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />

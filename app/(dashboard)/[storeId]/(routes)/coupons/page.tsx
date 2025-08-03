@@ -29,7 +29,7 @@ const CouponsPage = async ({ params }: { params: { storeId: string } }) => {
   const formattedCoupons: CouponColumn[] = coupons.map((item) => ({
     id: item.id,
     code: item.code,
-    // type: item.type,
+    isActive: item.isActive,
     value: item.value,
     startDate: format(new Date(item.startDate), "MMMM do, yyyy"),
     expiryDate: format(new Date(item.expiryDate), "MMMM do, yyyy"),

@@ -159,6 +159,7 @@ export const ProductForm = ({
               sizeId: undefined,
               colorId: undefined,
               sku: "",
+              hsn: "",
               variantPrices: [],
             },
           ],
@@ -210,7 +211,7 @@ export const ProductForm = ({
       console.log(error);
       if (
         error.response?.status === 400 &&
-        error.response?.data === "Slug or SKU already exists"
+        error.response?.data === "Slug or SKU or HSN already exists"
       ) {
         form.setError("slug", {
           type: "manual",

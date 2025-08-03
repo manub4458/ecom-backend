@@ -2,11 +2,7 @@ import * as z from "zod";
 
 export const CouponFormSchema = z.object({
   code: z.string().min(1, { message: "Coupon code is required" }),
-  // type: z.enum(["percentage", "fixed"], {
-  //   errorMap: () => ({
-  //     message: "Coupon type must be 'percentage' or 'fixed'",
-  //   }),
-  // }),
+  isActive: z.boolean().default(true),
   value: z.number().min(0, { message: "Value must be a positive number" }),
   startDate: z.string().min(1, { message: "Start date is required" }),
   expiryDate: z.string().min(1, { message: "Expiry date is required" }),

@@ -10,7 +10,7 @@ export async function POST(
     const session = await auth();
     const {
       code,
-      type,
+      isActive,
       value,
       startDate,
       expiryDate,
@@ -82,6 +82,7 @@ export async function POST(
       data: {
         code,
         value,
+        isActive,
         startDate: new Date(startDate),
         expiryDate: new Date(expiryDate),
         usagePerUser: usagePerUser || 1,

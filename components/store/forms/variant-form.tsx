@@ -23,6 +23,7 @@ interface VariantFormProps {
     stock: number;
     images: string[];
     sku?: string;
+    hsn?: string;
     variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
   }>;
   onChange: (
@@ -33,6 +34,7 @@ interface VariantFormProps {
       stock: number;
       images: string[];
       sku?: string;
+      hsn?: string;
       variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
     }>
   ) => void;
@@ -79,6 +81,7 @@ export default function VariantForm({
         stock: 0,
         images: [],
         sku: "",
+        hsn: "",
         sizeId: null,
         colorId: null,
         variantPrices: [
@@ -218,6 +221,18 @@ export default function VariantForm({
                   updateVariant(variantIndex, { sku: e.target.value })
                 }
                 placeholder="Enter SKU"
+                disabled={loading}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">HSN Code</label>
+              <Input
+                value={variant.hsn || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, { hsn: e.target.value })
+                }
+                placeholder="Enter HSN Code"
                 disabled={loading}
               />
             </div>

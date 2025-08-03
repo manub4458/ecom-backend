@@ -194,7 +194,7 @@ export const sizeColumns: ColumnDef<SizeColumn>[] = [
 export type CouponColumn = {
   id: string;
   code: string;
-  // type: string;
+  isActive: boolean;
   value: number;
   startDate: string;
   expiryDate: string;
@@ -215,6 +215,11 @@ export const couponColumns: ColumnDef<CouponColumn>[] = [
     accessorKey: "value",
     header: "Value",
   },
+  {
+    accessorKey: "isActive",
+    header: "Active",
+  },
+
   {
     accessorKey: "startDate",
     header: "Start Date",

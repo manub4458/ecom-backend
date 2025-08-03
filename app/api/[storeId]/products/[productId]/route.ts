@@ -142,6 +142,20 @@ export async function PATCH(
           });
         }
       }
+
+      if (variant.hsn && !variant.id) {
+        const existingVariant = await db.variant.findFirst({
+          where: {
+            hsn: variant.hsn,
+          },
+        });
+        if (existingVariant) {
+          return new NextResponse(`HSN ${variant.hsn} already exists`, {
+            status: 400,
+          });
+        }
+      }
+
       if (variant.variantPrices && variant.variantPrices.length > 0) {
         const locationIds = variant.variantPrices.map((vp) => vp.locationId);
         const locations = await db.location.findMany({
@@ -194,6 +208,7 @@ export async function PATCH(
             update: {
               stock: variant.stock,
               sku: variant.sku || undefined,
+              hsn: variant.hsn || undefined,
               sizeId: variant.sizeId === null ? null : variant.sizeId,
               colorId: variant.colorId === null ? null : variant.colorId,
               images: {
@@ -212,6 +227,7 @@ export async function PATCH(
             create: {
               stock: variant.stock,
               sku: variant.sku || undefined,
+              hsn: variant.hsn || undefined,
               sizeId: variant.sizeId === null ? null : variant.sizeId,
               colorId: variant.colorId === null ? null : variant.colorId,
               images: {
@@ -253,7 +269,9 @@ export async function PATCH(
   } catch (error: any) {
     console.log("[PRODUCT_PATCH]", error);
     if (error.code === "P2002") {
-      return new NextResponse("Slug or SKU already exists", { status: 400 });
+      return new NextResponse("Slug or SKU or HSN already exists", {
+        status: 400,
+      });
     }
     return new NextResponse("Internal server error", { status: 500 });
   }

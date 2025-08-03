@@ -16,6 +16,7 @@ export const VariantSchema = z
     stock: z.number().min(0, "Stock must be non-negative"),
     images: z.array(z.string().url()).min(1, "At least one image is required"),
     sku: z.string().optional(),
+    hsn: z.string().optional(),
     variantPrices: z
       .array(
         z.object({

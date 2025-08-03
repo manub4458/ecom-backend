@@ -335,6 +335,7 @@ model Variant {
   stock         Int            @default(0)
   images        VariantImage[]
   sku           String?        @unique
+  hsn           String?        @unique
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   OrderItem     OrderItem[]
@@ -369,6 +370,7 @@ model Coupon {
   description  String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+  isActive     Boolean         @default(true)
 
   @@index([storeId])
 }
