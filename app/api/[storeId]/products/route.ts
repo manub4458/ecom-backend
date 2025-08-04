@@ -201,7 +201,10 @@ export async function POST(
             sizeId: variant.sizeId === null ? null : variant.sizeId,
             colorId: variant.colorId === null ? null : variant.colorId,
             images: {
-              create: variant.images.map((url) => ({ url })),
+              create: variant.media.map((media) => ({
+                url: media.url,
+                mediaType: media.mediaType || "IMAGE", // Default to IMAGE for compatibility
+              })),
             },
             variantPrices: {
               create: variant.variantPrices?.map((vp) => ({

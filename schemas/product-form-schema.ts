@@ -14,7 +14,15 @@ export const VariantSchema = z
       .optional()
       .transform((val) => (val === "" ? null : val)),
     stock: z.number().min(0, "Stock must be non-negative"),
-    images: z.array(z.string().url()).min(1, "At least one image is required"),
+    // images: z.array(z.string().url()).min(1, "At least one image is required"),
+    media: z
+      .array(
+        z.object({
+          url: z.string().url(),
+          mediaType: z.enum(["IMAGE", "VIDEO"]).default("IMAGE"),
+        })
+      )
+      .min(1, "At least one media item is required"),
     sku: z.string().optional(),
     hsn: z.string().optional(),
     variantPrices: z

@@ -213,7 +213,10 @@ export async function PATCH(
               colorId: variant.colorId === null ? null : variant.colorId,
               images: {
                 deleteMany: {},
-                create: variant.images.map((url) => ({ url })),
+                create: variant.media.map((image) => ({
+                  url: image.url,
+                  mediaType: image.mediaType || "IMAGE", // Default to IMAGE for compatibility
+                })),
               },
               variantPrices: {
                 deleteMany: {},
@@ -231,7 +234,10 @@ export async function PATCH(
               sizeId: variant.sizeId === null ? null : variant.sizeId,
               colorId: variant.colorId === null ? null : variant.colorId,
               images: {
-                create: variant.images.map((url) => ({ url })),
+                create: variant.media.map((image) => ({
+                  url: image.url,
+                  mediaType: image.mediaType || "IMAGE", // Default to IMAGE for compatibility
+                })),
               },
               variantPrices: {
                 create: variant.variantPrices?.map((vp) => ({

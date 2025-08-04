@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { ImageUpload } from "@/components/store/utils/image-upload";
 import { toast } from "sonner";
+import { MediaUpload } from "@/components/store/utils/media-upload";
 
 interface VariantFormProps {
   value: Array<{
@@ -21,7 +22,7 @@ interface VariantFormProps {
     sizeId?: string | null;
     colorId?: string | null;
     stock: number;
-    images: string[];
+    media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
     sku?: string;
     hsn?: string;
     variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
@@ -32,7 +33,7 @@ interface VariantFormProps {
       sizeId?: string | null;
       colorId?: string | null;
       stock: number;
-      images: string[];
+      media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
       sku?: string;
       hsn?: string;
       variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
@@ -79,7 +80,7 @@ export default function VariantForm({
       ...value,
       {
         stock: 0,
-        images: [],
+        media: [],
         sku: "",
         hsn: "",
         sizeId: null,
@@ -224,7 +225,7 @@ export default function VariantForm({
                 disabled={loading}
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-1">HSN Code</label>
               <Input
@@ -354,16 +355,16 @@ export default function VariantForm({
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Images</label>
-              <ImageUpload
-                value={variant.images}
+              <label className="block text-sm font-medium mb-1">
+                Media (Images/Videos)
+              </label>
+              <MediaUpload
+                value={variant.media}
                 disabled={loading}
-                onChange={(urls) =>
-                  updateVariant(variantIndex, { images: urls })
-                }
+                onChange={(media) => updateVariant(variantIndex, { media })}
                 onRemove={(url) =>
                   updateVariant(variantIndex, {
-                    images: variant.images.filter((img) => img !== url),
+                    media: variant.media.filter((m) => m.url !== url),
                   })
                 }
               />
