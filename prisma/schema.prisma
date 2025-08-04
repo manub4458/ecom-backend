@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
 model User {
   id            String       @id @default(auto()) @map("_id") @db.ObjectId
   name          String
@@ -358,12 +363,13 @@ model Variant {
 }
 
 model VariantImage {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  variantId String   @db.ObjectId
-  variant   Variant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  variantId String    @db.ObjectId
+  variant   Variant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
   url       String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  mediaType MediaType @default(IMAGE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([variantId])
 }

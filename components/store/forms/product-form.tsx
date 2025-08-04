@@ -67,7 +67,7 @@ interface ProductFormProps {
     | (Product & {
         brand: Brand | null;
         variants: (Variant & {
-          images: VariantImage[];
+          images: (VariantImage & { mediaType: "IMAGE" | "VIDEO" })[];
           variantPrices: { locationId: string; price: number; mrp: number }[];
         })[];
         productSpecifications: {
@@ -127,7 +127,10 @@ export const ProductForm = ({
           specifications: data.productSpecifications || [],
           variants: data.variants.map((v: any) => ({
             ...v,
-            images: v.images.map((img: any) => img.url),
+            media: v.images.map((img: any) => ({
+              url: img.url,
+              mediaType: img.mediaType || "IMAGE",
+            })),
             variantPrices: v.variantPrices || [],
           })),
           metaTitle: data.metaTitle || "",
@@ -155,7 +158,7 @@ export const ProductForm = ({
           variants: [
             {
               stock: 0,
-              images: [],
+              media: [],
               sizeId: undefined,
               colorId: undefined,
               sku: "",
