@@ -58,7 +58,6 @@ model Store {
   id                  String               @id @default(auto()) @map("_id") @db.ObjectId
   name                String
   userId              String               @db.ObjectId
-  // billboards          BillBoard[]          @relation("StoreToBillboard")
   categories          Category[]           @relation("StoreToCategory")
   subCategories       SubCategory[]        @relation("StoreToSubCategory")
   sizes               Size[]               @relation("StoreToSize")
@@ -174,6 +173,7 @@ model SubCategory {
   slug               String        @unique
   name               String
   bannerImage        String
+  reviewCategories   Json[]        @default([])
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   icon               String?
@@ -259,19 +259,32 @@ model Product {
 }
 
 model Review {
-  id        String        @id @default(auto()) @map("_id") @db.ObjectId
-  productId String        @db.ObjectId
-  product   Product       @relation("ProductToReview", fields: [productId], references: [id], onDelete: Cascade)
-  userName  String
-  userId    String
-  rating    Int
-  text      String
-  images    ReviewImage[] @relation("ReviewToReviewImage")
-  videos    ReviewVideo[] @relation("ReviewToReviewVideo")
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id              String                 @id @default(auto()) @map("_id") @db.ObjectId
+  productId       String                 @db.ObjectId
+  product         Product                @relation("ProductToReview", fields: [productId], references: [id], onDelete: Cascade)
+  userName        String
+  userId          String
+  rating          Int
+  text            String
+  images          ReviewImage[]          @relation("ReviewToReviewImage")
+  videos          ReviewVideo[]          @relation("ReviewToReviewVideo")
+  categoryRatings ReviewCategoryRating[] @relation("ReviewToCategoryRating")
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
 
   @@index([productId])
+}
+
+model ReviewCategoryRating {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  reviewId     String   @db.ObjectId
+  review       Review   @relation("ReviewToCategoryRating", fields: [reviewId], references: [id], onDelete: Cascade)
+  categoryName String
+  rating       Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([reviewId])
 }
 
 model ReviewImage {

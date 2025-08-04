@@ -7,6 +7,7 @@ export const publicRoutes = [
   "/token-verification",
   "/api/[storeId]/products/[productId]/reviews",
   "/api/[storeId]/products/[productId]/reviews/[reviewId]",
+  "/api/[storeId]/subcategories/[subCategoryId]",
   "/api/products/[productId]/reviews/[reviewId]",
   "/api/[storeId]/products",
   "/api/products",

@@ -40,6 +40,7 @@ export async function POST(
       images = [],
       videos = [],
       userId,
+      categoryRatings = [],
     } = validatedData.data;
 
     if (!params.productId) {
@@ -51,11 +52,34 @@ export async function POST(
 
     const product = await db.product.findUnique({
       where: { id: params.productId },
+      include: {
+        subCategory: {
+          select: {
+            reviewCategories: true,
+          },
+        },
+      },
     });
 
     if (!product) {
       return new NextResponse("Product does not exist", {
         status: 404,
+        headers,
+      });
+    }
+
+    // Validate category ratings
+    const validCategories = product.subCategory?.reviewCategories.map(
+      (cat: any) => cat.name
+    ) || [];
+    const invalidCategories = categoryRatings.filter(
+      (cr: { categoryName: string; rating: number }) =>
+        !validCategories.includes(cr.categoryName) || cr.rating < 1 || cr.rating > 5
+    );
+
+    if (invalidCategories.length > 0) {
+      return new NextResponse("Invalid category ratings", {
+        status: 400,
         headers,
       });
     }
@@ -73,10 +97,17 @@ export async function POST(
         videos: {
           create: videos.map((url) => ({ url })),
         },
+        categoryRatings: {
+          create: categoryRatings.map((cr: { categoryName: string; rating: number }) => ({
+            categoryName: cr.categoryName,
+            rating: cr.rating,
+          })),
+        },
       },
       include: {
         images: true,
         videos: true,
+        categoryRatings: true,
         product: {
           select: {
             id: true,
@@ -134,6 +165,7 @@ export async function GET(
       include: {
         images: true,
         videos: true,
+        categoryRatings: true,
         product: {
           select: {
             id: true,
@@ -143,8 +175,8 @@ export async function GET(
         },
       },
       orderBy: [
-        { rating: "desc" }, // Sort by rating (highest first)
-        { createdAt: "desc" }, // Then by createdAt (newest first)
+        { rating: "desc" },
+        { createdAt: "desc" },
       ],
       skip,
       take: limit,
@@ -153,6 +185,94 @@ export async function GET(
     return NextResponse.json(reviews, { headers });
   } catch (error) {
     console.log("[REVIEWS_GET]", error);
+    return new NextResponse("Internal server error", { status: 500, headers });
+  }
+}
+
+
+
+export async function GET_AVERAGE_RATINGS(
+  request: Request,
+  { params }: { params: { productId: string } }
+) {
+  // Set CORS headers
+  const headers = {
+    "Access-Control-Allow-Origin":
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "http://localhost:3000" ||
+      "http://localhost:3001" ||
+      "https://favobliss.vercel.app",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
+  // Handle preflight OPTIONS request
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
+
+  try {
+    if (!params.productId) {
+      return new NextResponse("Product ID is required", {
+        status: 400,
+        headers,
+      });
+    }
+
+    const product = await db.product.findUnique({
+      where: { id: params.productId },
+      include: {
+        subCategory: {
+          select: {
+            reviewCategories: true,
+          },
+        },
+      },
+    });
+
+    if (!product) {
+      return new NextResponse("Product does not exist", {
+        status: 404,
+        headers,
+      });
+    }
+
+    const reviews = await db.review.findMany({
+      where: {
+        productId: params.productId,
+      },
+      include: {
+        categoryRatings: true,
+      },
+    });
+
+    const categoryRatingsMap: { [key: string]: { total: number; count: number } } = {};
+
+    reviews.forEach((review) => {
+      review.categoryRatings.forEach((cr) => {
+        if (!categoryRatingsMap[cr.categoryName]) {
+          categoryRatingsMap[cr.categoryName] = { total: 0, count: 0 };
+        }
+        categoryRatingsMap[cr.categoryName].total += cr.rating;
+        categoryRatingsMap[cr.categoryName].count += 1;
+      });
+    });
+
+    const averageRatings = Object.keys(categoryRatingsMap).map((categoryName) => ({
+      categoryName,
+      averageRating: categoryRatingsMap[categoryName].count
+        ? Number(
+            (
+              categoryRatingsMap[categoryName].total /
+              categoryRatingsMap[categoryName].count
+            ).toFixed(2)
+          )
+        : 0,
+    }));
+
+    return NextResponse.json(averageRatings, { headers });
+  } catch (error) {
+    console.log("[AVERAGE_RATINGS_GET]", error);
     return new NextResponse("Internal server error", { status: 500, headers });
   }
 }

@@ -34,8 +34,15 @@ export async function POST(
       return new NextResponse("Invalid data provided", { status: 400 });
     }
 
-    const { name, slug, bannerImage, categoryId, parentId, icon } =
-      validatedData.data;
+    const {
+      name,
+      slug,
+      bannerImage,
+      categoryId,
+      parentId,
+      icon,
+      reviewCategories,
+    } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -83,6 +90,7 @@ export async function POST(
         categoryId,
         parentId,
         storeId: params.storeId,
+        reviewCategories: reviewCategories || [],
       },
     });
 

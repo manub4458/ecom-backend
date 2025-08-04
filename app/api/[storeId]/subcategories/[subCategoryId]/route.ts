@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { SubCategorySchema } from "@/schemas/subcategory-form-schema";
 import { NextResponse } from "next/server";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 async function isValidParent(
   subCategoryId: string | null,
   parentId: string
@@ -34,8 +40,15 @@ export async function PATCH(
       return new NextResponse("Invalid attributes", { status: 400 });
     }
 
-    const { name, slug, icon, bannerImage, categoryId, parentId } =
-      validatedData.data;
+    const {
+      name,
+      slug,
+      icon,
+      bannerImage,
+      categoryId,
+      parentId,
+      reviewCategories,
+    } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -93,6 +106,7 @@ export async function PATCH(
         bannerImage,
         categoryId,
         parentId,
+        reviewCategories: reviewCategories || [],
       },
     });
 
@@ -157,12 +171,34 @@ export async function DELETE(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { subCategoryId: string } }
 ) {
+  const origin = request.headers.get("origin");
+
+  // Determine if the origin is allowed
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  // Set CORS headers
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
+
   try {
     if (!params.subCategoryId) {
-      return new NextResponse("Subcategory Id is required", { status: 400 });
+      return new NextResponse("Subcategory Id is required", {
+        status: 400,
+        headers,
+      });
     }
 
     const subCategory = await db.subCategory.findUnique({
@@ -174,9 +210,9 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(subCategory);
+    return NextResponse.json(subCategory, { headers });
   } catch (error) {
     console.log("[SUBCATEGORY_GET]", error);
-    return new NextResponse("Internal server error", { status: 500 });
+    return new NextResponse("Internal server error", { status: 500, headers });
   }
 }

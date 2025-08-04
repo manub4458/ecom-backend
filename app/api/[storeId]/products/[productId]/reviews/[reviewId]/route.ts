@@ -55,6 +55,7 @@ export async function DELETE(
       include: {
         images: true,
         videos: true,
+        categoryRatings: true,
       },
     });
 

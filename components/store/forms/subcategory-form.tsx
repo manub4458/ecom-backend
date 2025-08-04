@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Trash2 } from "lucide-react";
+import { Trash2, PlusCircle, X } from "lucide-react";
 import { Header } from "@/components/store/utils/header";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -71,6 +71,13 @@ export const SubCategoryForm = ({
           icon: initialData.icon || "",
           categoryId: initialData.categoryId,
           parentId: initialData.parentId || undefined,
+          reviewCategories: Array.isArray(initialData.reviewCategories)
+            ? initialData.reviewCategories
+                .filter(
+                  (cat) => cat && typeof cat === "object" && "name" in cat
+                )
+                .map((cat: any) => ({ name: String(cat.name ?? "") }))
+            : [],
         }
       : {
           name: "",
@@ -79,6 +86,7 @@ export const SubCategoryForm = ({
           bannerImage: "",
           categoryId: "",
           parentId: undefined,
+          reviewCategories: [],
         },
   });
 
@@ -162,6 +170,21 @@ export const SubCategoryForm = ({
     }
   };
 
+  // Function to add a new review category
+  const addReviewCategory = () => {
+    const currentCategories = form.getValues("reviewCategories") || [];
+    form.setValue("reviewCategories", [...currentCategories, { name: "" }]);
+  };
+
+  // Function to remove a review category
+  const removeReviewCategory = (index: number) => {
+    const currentCategories = form.getValues("reviewCategories") || [];
+    form.setValue(
+      "reviewCategories",
+      currentCategories.filter((_, i) => i !== index)
+    );
+  };
+
   return (
     <>
       <AlertModal
@@ -232,8 +255,7 @@ export const SubCategoryForm = ({
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <Select
-                    //@ts-ignore
-                    disabled={loading || (parentId && parentId !== "none")}
+                    disabled={loading || (!!parentId && parentId !== "none")}
                     onValueChange={field.onChange}
                     value={field.value}
                     defaultValue={field.value}
@@ -296,31 +318,12 @@ export const SubCategoryForm = ({
                 </FormItem>
               )}
             />
-            {/* <FormField
-              control={form.control}
-              name="bannerImage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Banner Image</FormLabel>
-                  <FormControl>
-                    <ImageUpload
-                      value={field.value ? [field.value] : []}
-                      disabled={loading}
-                      onChange={(url) => field.onChange(url)}
-                      onRemove={() => field.onChange("")}
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            /> */}
-
             <FormField
               control={form.control}
               name="bannerImage"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Banner image</FormLabel>
+                  <FormLabel>Banner Image</FormLabel>
                   <FormControl>
                     <SingleImageUpload
                       value={field.value || ""}
@@ -351,6 +354,66 @@ export const SubCategoryForm = ({
                 </FormItem>
               )}
             />
+            <div className="col-span-1 md:col-span-2 lg:col-span-3">
+              <FormField
+                control={form.control}
+                name="reviewCategories"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Review Categories</FormLabel>
+                    <FormControl>
+                      <div className="space-y-4">
+                        {(field.value || []).map(
+                          (category: { name: string }, index: number) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-2"
+                            >
+                              <Input
+                                value={category.name}
+                                onChange={(e) => {
+                                  const newCategories = [...field.value];
+                                  newCategories[index] = {
+                                    name: e.target.value,
+                                  };
+                                  field.onChange(newCategories);
+                                }}
+                                placeholder={`Review category ${index + 1}`}
+                                disabled={loading}
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => removeReviewCategory(index)}
+                                disabled={loading}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addReviewCategory}
+                          disabled={loading}
+                        >
+                          <PlusCircle className="h-4 w-4 mr-2" />
+                          Add Review Category
+                        </Button>
+                      </div>
+                    </FormControl>
+                    <FormDescription className="text-xs text-muted-foreground">
+                      Add categories for users to rate when reviewing products
+                      in this subcategory (e.g., Battery, Camera, Display).
+                    </FormDescription>
+                    <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
           <Button type="submit" disabled={loading}>
             {action}

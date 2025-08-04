@@ -15,4 +15,8 @@ export const SubCategorySchema = z.object({
   icon: z.string().optional(),
   categoryId: z.string().min(1, "Category is required"),
   parentId: z.string().optional(),
+  reviewCategories: z
+    .array(z.object({ name: z.string().min(1, "Category name is required") }))
+    .optional()
+    .default([]),
 });
