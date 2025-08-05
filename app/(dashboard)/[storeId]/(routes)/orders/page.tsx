@@ -71,6 +71,8 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
             return total + price * item.quantity;
           }, 0)
         ),
+        isCompleted: item.isCompleted ? "Completed" : "Failed",
+        gstnumber: item.gstNumber ? item.gstNumber : "Not provided",
         createdAt: format(item.createdAt, "MMMM do, yyyy"),
       };
     })

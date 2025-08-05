@@ -6,14 +6,6 @@ const cloudName = "dgcksrb1n";
 const apiKey = "225158414381951";
 const apiSecret = "uR-CTktbDCbmuh39hbL-8aTiXb8";
 
-// Debug: Log all environment variables
-console.log("All Environment Variables:", {
-  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
-  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ? "****" : undefined,
-  DATABASE_URL: process.env.DATABASE_URL ? "****" : undefined,
-  AUTH_SECRET: process.env.AUTH_SECRET,
-});
 
 // Check environment variables at startup
 if (!cloudName || !apiKey || !apiSecret) {

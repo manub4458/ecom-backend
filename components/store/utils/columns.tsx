@@ -432,8 +432,10 @@ export type OrderColumn = {
   phone: string;
   address: string;
   isPaid: boolean;
+  isCompleted: string;
   products: string;
   totalPrice: string;
+  gstnumber: string;
   createdAt: string;
 };
 
@@ -457,6 +459,14 @@ export const orderColumns: ColumnDef<OrderColumn>[] = [
   {
     accessorKey: "isPaid",
     header: "Paid",
+  },
+  {
+    accessorKey: "isCompleted",
+    header: "Status",
+  },
+  {
+    accessorKey: "gstnumber",
+    header: "GST Number",
   },
   {
     accessorKey: "createdAt",
