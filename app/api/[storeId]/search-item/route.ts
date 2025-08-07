@@ -13,13 +13,10 @@ export async function GET(
 ) {
   // Set CORS headers
   const origin = request.headers.get("origin");
-
-  // Determine if the origin is allowed
   const corsOrigin = allowedOrigins.includes(origin ?? "")
     ? origin ?? ""
     : allowedOrigins[0];
 
-  // Set CORS headers
   const headers = {
     "Access-Control-Allow-Origin": corsOrigin || "",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -42,199 +39,241 @@ export async function GET(
     const brandName = searchParams.get("brandName");
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
-
-    if (!query) {
-      return new NextResponse("Search query is required", {
-        status: 400,
-        headers,
-      });
-    }
-
     const skip = (page - 1) * limit;
-    const brandLimit = Math.floor(limit / 4); // Split limit across brands, categories, subcategories, products
+    const brandLimit = Math.floor(limit / 4);
     const categoryLimit = Math.floor(limit / 4);
     const subCategoryLimit = Math.floor(limit / 4);
-    const productLimit = Math.ceil(limit / 4); // Ensure total adds up to limit
+    const productLimit = query ? Math.ceil(limit / 4) : 4;
 
-    // Fetch brands
-    const brands = await db.brand.findMany({
-      where: {
-        storeId: params.storeId,
-        name: { contains: query, mode: "insensitive" },
-      },
-      take: brandLimit,
-    });
+    let searchResults;
 
-    // Fetch categories
-    const categories = await db.category.findMany({
-      where: {
-        storeId: params.storeId,
-        name: { contains: query, mode: "insensitive" },
-      },
-      include: {
-        // billboard: true,
-        subCategories: {
-          include: {
-            // billboard: true,
-            childSubCategories: {
-              include: {
-                // billboard: true,
-                childSubCategories: {
-                  include: {
-                    // billboard: true,
-                    childSubCategories: true,
-                  },
+    if (!query) {
+      // Fetch suggested data when no query is provided
+      const brands = await db.brand.findMany({
+        where: { storeId: params.storeId },
+        orderBy: { createdAt: "desc" }, // Or use a metric like popularity
+        take: brandLimit,
+      });
+
+      const categories = await db.category.findMany({
+        where: { storeId: params.storeId },
+        include: {
+          subCategories: {
+            include: {
+              childSubCategories: {
+                include: { childSubCategories: true },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: categoryLimit,
+      });
+
+      const transformedCategories = categories.map((category) => ({
+        ...category,
+        subCategories: category.subCategories
+          .filter((sub) => sub.parentId === null)
+          .map((sub) => ({
+            ...sub,
+            childSubCategories: sub.childSubCategories.map((child) => ({
+              ...child,
+              childSubCategories: child.childSubCategories || [],
+            })),
+          })),
+      }));
+
+      const subCategories = await db.subCategory.findMany({
+        where: { storeId: params.storeId },
+        include: {
+          category: true,
+          parent: true,
+          childSubCategories: {
+            include: { childSubCategories: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: subCategoryLimit,
+      });
+
+      const products = await db.product.findMany({
+        where: {
+          storeId: params.storeId,
+          isArchieved: false,
+        },
+        include: {
+          brand: true,
+          category: true,
+          subCategory: { include: { parent: true } },
+          variants: { include: { size: true, color: true, images: true } },
+          productSpecifications: {
+            include: { specificationField: { include: { group: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" }, // Or use a metric like sales or views
+        skip,
+        take: productLimit,
+      });
+
+      searchResults = {
+        brands,
+        categories: transformedCategories,
+        subCategories,
+        products,
+        pagination: {
+          page,
+          limit,
+          totalBrands: brands.length,
+          totalCategories: categories.length,
+          totalSubCategories: subCategories.length,
+          totalProducts: products.length,
+        },
+        isSuggested: true, // Flag to indicate these are suggested results
+      };
+
+      console.log(
+        `[SEARCH_GET] No query provided, returning suggested data for storeId: ${params.storeId}`
+      );
+    } else {
+      // Existing search logic for when query is provided
+      const brands = await db.brand.findMany({
+        where: {
+          storeId: params.storeId,
+          name: { contains: query, mode: "insensitive" },
+        },
+        take: brandLimit,
+      });
+
+      const categories = await db.category.findMany({
+        where: {
+          storeId: params.storeId,
+          name: { contains: query, mode: "insensitive" },
+        },
+        include: {
+          subCategories: {
+            include: {
+              childSubCategories: {
+                include: { childSubCategories: true },
+              },
+            },
+          },
+        },
+        take: categoryLimit,
+      });
+
+      const transformedCategories = categories.map((category) => ({
+        ...category,
+        subCategories: category.subCategories
+          .filter((sub) => sub.parentId === null)
+          .map((sub) => ({
+            ...sub,
+            childSubCategories: sub.childSubCategories.map((child) => ({
+              ...child,
+              childSubCategories: child.childSubCategories || [],
+            })),
+          })),
+      }));
+
+      const subCategories = await db.subCategory.findMany({
+        where: {
+          storeId: params.storeId,
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            {
+              childSubCategories: {
+                some: {
+                  OR: [
+                    { name: { contains: query, mode: "insensitive" } },
+                    {
+                      childSubCategories: {
+                        some: {
+                          OR: [
+                            { name: { contains: query, mode: "insensitive" } },
+                            {
+                              childSubCategories: {
+                                some: {
+                                  name: {
+                                    contains: query,
+                                    mode: "insensitive",
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  ],
                 },
               },
             },
+          ],
+        },
+        include: {
+          category: true,
+          parent: true,
+          childSubCategories: {
+            include: { childSubCategories: true },
           },
         },
-      },
-      take: categoryLimit,
-    });
-
-    const transformedCategories = categories.map((category) => ({
-      ...category,
-      subCategories: category.subCategories
-        .filter((sub) => sub.parentId === null)
-        .map((sub) => ({
-          ...sub,
-          childSubCategories: sub.childSubCategories.map((child) => ({
-            ...child,
-            childSubCategories: child.childSubCategories.map((grandchild) => ({
-              ...grandchild,
-              childSubCategories: grandchild.childSubCategories || [],
-            })),
-          })),
-        })),
-    }));
-
-    // Fetch subcategories
-    const subCategories = await db.subCategory.findMany({
-      where: {
-        storeId: params.storeId,
-        OR: [
-          { name: { contains: query, mode: "insensitive" } },
-          {
-            childSubCategories: {
-              some: {
-                OR: [
-                  { name: { contains: query, mode: "insensitive" } },
-                  {
-                    childSubCategories: {
-                      some: {
-                        OR: [
-                          { name: { contains: query, mode: "insensitive" } },
-                          {
-                            childSubCategories: {
-                              some: {
-                                name: { contains: query, mode: "insensitive" },
-                              },
-                            },
-                          },
-                        ],
-                      },
-                    },
-                  },
-                ],
-              },
-            },
-          },
-        ],
-      },
-      include: {
-        // billboard: true,
-        category: true,
-        parent: true,
-        childSubCategories: {
-          include: {
-            // billboard: true,
-            childSubCategories: {
-              include: {
-                // billboard: true,
-                childSubCategories: true,
-              },
-            },
-          },
-        },
-      },
-      take: subCategoryLimit,
-    });
-
-    // Fetch products
-    const productWhere: any = {
-      storeId: params.storeId,
-      isArchieved: false,
-      name: { contains: query, mode: "insensitive" },
-    };
-
-    if (brandName) {
-      const brand = await db.brand.findFirst({
-        where: {
-          name: brandName,
-          storeId: params.storeId,
-        },
+        take: subCategoryLimit,
       });
-      if (!brand) {
-        return new NextResponse("Brand not found", { status: 404, headers });
+
+      const productWhere: any = {
+        storeId: params.storeId,
+        isArchieved: false,
+        name: { contains: query, mode: "insensitive" },
+      };
+
+      if (brandName) {
+        const brand = await db.brand.findFirst({
+          where: {
+            name: brandName,
+            storeId: params.storeId,
+          },
+        });
+        if (!brand) {
+          return new NextResponse("Brand not found", { status: 404, headers });
+        }
+        productWhere.brandId = brand.id;
       }
-      productWhere.brandId = brand.id;
+
+      const products = await db.product.findMany({
+        where: productWhere,
+        include: {
+          brand: true,
+          category: true,
+          subCategory: { include: { parent: true } },
+          variants: { include: { size: true, color: true, images: true } },
+          productSpecifications: {
+            include: { specificationField: { include: { group: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: productLimit,
+      });
+
+      searchResults = {
+        brands,
+        categories: transformedCategories,
+        subCategories,
+        products,
+        pagination: {
+          page,
+          limit,
+          totalBrands: brands.length,
+          totalCategories: categories.length,
+          totalSubCategories: subCategories.length,
+          totalProducts: products.length,
+        },
+        isSuggested: false,
+      };
+
+      console.log(
+        `[SEARCH_GET] Found ${brands.length} brands, ${products.length} products, ${categories.length} categories, ${subCategories.length} subcategories for storeId: ${params.storeId}, query: ${query}, brandName: ${brandName}`
+      );
     }
-
-    const products = await db.product.findMany({
-      where: productWhere,
-      include: {
-        brand: true,
-        category: true,
-        subCategory: {
-          include: {
-            parent: true,
-            // billboard: true,
-          },
-        },
-        variants: {
-          include: {
-            size: true,
-            color: true,
-            images: true,
-          },
-        },
-        productSpecifications: {
-          include: {
-            specificationField: {
-              include: {
-                group: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      skip,
-      take: productLimit,
-    });
-
-    // Combine results
-    const searchResults = {
-      brands,
-      categories: transformedCategories,
-      subCategories,
-      products,
-      pagination: {
-        page,
-        limit,
-        totalBrands: brands.length,
-        totalCategories: categories.length,
-        totalSubCategories: subCategories.length,
-        totalProducts: products.length,
-      },
-    };
-
-    console.log(
-      `[SEARCH_GET] Found ${brands.length} brands, ${products.length} products, ${categories.length} categories, ${subCategories.length} subcategories for storeId: ${params.storeId}, query: ${query}, brandName: ${brandName}`
-    );
 
     return NextResponse.json(searchResults, { headers });
   } catch (error) {
