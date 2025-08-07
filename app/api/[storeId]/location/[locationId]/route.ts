@@ -2,6 +2,12 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 export async function PATCH(
   request: Request,
   { params }: { params: { storeId: string; locationId: string } }
@@ -122,12 +128,30 @@ export async function DELETE(
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: { locationId: string } }
 ) {
+  const origin = request.headers.get("origin");
+
+  // Determine if the origin is allowed
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  // Set CORS headers
+  const headers = {
+    "Access-Control-Allow-Origin": corsOrigin || "",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
+
   try {
     if (!params.locationId) {
-      return new NextResponse("Location Id is required", { status: 400 });
+      return new NextResponse("Location Id is required", {
+        status: 400,
+        headers,
+      });
     }
 
     const location = await db.location.findUnique({
@@ -136,9 +160,9 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(location);
+    return NextResponse.json(location, { headers });
   } catch (error) {
     console.log("[LOCATION_GET]", error);
-    return new NextResponse("Internal server error", { status: 500 });
+    return new NextResponse("Internal server error", { status: 500, headers });
   }
 }
