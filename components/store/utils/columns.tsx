@@ -18,6 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { OrderCellActions } from "./orders-cell-actions";
 
 export type Billboard = {
   id: string;
@@ -432,17 +433,47 @@ export type OrderColumn = {
   phone: string;
   address: string;
   isPaid: boolean;
-  isCompleted: string;
+  status: string;
   products: string;
   totalPrice: string;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
   gstnumber: string;
   createdAt: string;
 };
 
 export const orderColumns: ColumnDef<OrderColumn>[] = [
   {
+    accessorKey: "orderNumber",
+    header: "Order Number",
+  },
+  {
     accessorKey: "products",
     header: "Products",
+    cell: ({ row }) => (
+      <div className="text-left max-w-xs table-cell-products">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="link"
+              className="p-0 h-auto font-normal text-left truncate max-w-52 w-full justify-start"
+              aria-label="View full products list"
+            >
+              {row.original.products || "No products"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <div className="space-y-2">
+              <h4 className="font-medium">Products</h4>
+              <p className="text-sm text-muted-foreground">
+                {row.original.products || "No products"}
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    ),
   },
   {
     accessorKey: "phone",
@@ -451,6 +482,26 @@ export const orderColumns: ColumnDef<OrderColumn>[] = [
   {
     accessorKey: "address",
     header: "Address",
+    cell: ({ row }) => (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="link"
+            className="p-0 h-auto font-normal max-w-52 w-full truncate text-left justify-start"
+          >
+            {row.original.address || "No address provided"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80">
+          <div className="space-y-2">
+            <h4 className="font-medium">Full Address</h4>
+            <p className="text-sm text-muted-foreground">
+              {row.original.address || "No address provided"}
+            </p>
+          </div>
+        </PopoverContent>
+      </Popover>
+    ),
   },
   {
     accessorKey: "totalPrice",
@@ -461,9 +512,18 @@ export const orderColumns: ColumnDef<OrderColumn>[] = [
     header: "Paid",
   },
   {
-    accessorKey: "isCompleted",
+    accessorKey: "status",
     header: "Status",
   },
+  {
+    accessorKey: "customerName",
+    header: "Customer Name",
+  },
+  {
+    accessorKey: "customerEmail",
+    header: "Customer Email",
+  },
+
   {
     accessorKey: "gstnumber",
     header: "GST Number",
@@ -471,5 +531,9 @@ export const orderColumns: ColumnDef<OrderColumn>[] = [
   {
     accessorKey: "createdAt",
     header: "Date",
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => <OrderCellActions data={row.original} />,
   },
 ];

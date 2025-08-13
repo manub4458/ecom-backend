@@ -38,6 +38,10 @@ export async function POST(
       isPaid,
       isCompleted,
       gstNumber,
+      zipCode,
+      customerId,
+      customerName,
+      customerEmail,
     }: {
       orderItems: { variantId: string; quantity: number }[];
       phone: string;
@@ -45,6 +49,10 @@ export async function POST(
       isPaid?: boolean;
       isCompleted?: boolean;
       gstNumber?: string;
+      zipCode?: string;
+      customerId?: string;
+      customerName?: string;
+      customerEmail?: string;
     } = await request.json();
 
     if (!orderItems || orderItems.length === 0 || !phone || !address) {
@@ -95,6 +103,16 @@ export async function POST(
       }
     }
 
+    let estimatedDeliveryDays = 3; // Fallback
+    if (zipCode) {
+      const location = await db.location.findFirst({
+        where: { pincode: zipCode, storeId: params.storeId },
+      });
+      if (location && location.deliveryDays) {
+        estimatedDeliveryDays = location.deliveryDays;
+      }
+    }
+
     let orderNumber: string;
     try {
       orderNumber = await generateOrderNumber();
@@ -112,6 +130,12 @@ export async function POST(
         isCompleted: isCompleted ?? false,
         gstNumber,
         orderNumber,
+        status: "PENDING", // Initial status
+        estimatedDeliveryDays,
+        customerId,
+        customerName,
+        customerEmail,
+        zipCode,
         orderItems: {
           create: orderItems.map((item) => ({
             variantId: item.variantId,
@@ -121,7 +145,10 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ orderId: order.id, headers });
+    return NextResponse.json(
+      { id: order.id, orderNumber: order.orderNumber },
+      { headers }
+    );
   } catch (error) {
     console.error("BACKEND ORDER POST API", error);
     return new NextResponse("Internal server error", { status: 500, headers });

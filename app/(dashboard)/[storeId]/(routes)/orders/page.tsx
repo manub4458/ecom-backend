@@ -1,10 +1,11 @@
+// frontend: pages/[storeId]/orders.tsx
 import { Metadata } from "next";
 import { format } from "date-fns";
 import { db } from "@/lib/db";
-
 import { OrderClient } from "@/components/store/utils/order-client";
 import { OrderColumn } from "@/components/store/utils/columns";
 import { formatter } from "@/lib/utils";
+import { OrderStatus } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Store | Orders",
@@ -12,9 +13,7 @@ export const metadata: Metadata = {
 
 const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
   const orders = await db.order.findMany({
-    where: {
-      storeId: params.storeId,
-    },
+    where: { storeId: params.storeId },
     include: {
       orderItems: {
         include: {
@@ -23,25 +22,21 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
               product: true,
               size: true,
               color: true,
-              variantPrices: true, // Include variantPrices
+              variantPrices: true,
             },
           },
         },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: { createdAt: "desc" },
   });
 
   const formattedOrders: OrderColumn[] = orders
     .map((item) => {
-      // Filter valid orderItems with non-null variantId and variant
       const validOrderItems = item.orderItems.filter(
         (orderItem) => orderItem.variantId && orderItem.variant
       );
 
-      // Skip orders with no valid orderItems
       if (validOrderItems.length === 0) {
         return null;
       }
@@ -51,6 +46,10 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
         phone: item.phone,
         address: item.address,
         isPaid: item.isPaid,
+        status: item.status as any,
+        orderNumber: item.orderNumber || "Pending",
+        customerName: item.customerName || "-",
+        customerEmail: item.customerEmail || "-",
         products: validOrderItems
           .map((orderItem) => {
             const variant = orderItem.variant;
@@ -66,13 +65,11 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
           .join(", "),
         totalPrice: formatter.format(
           validOrderItems.reduce((total, item) => {
-            // Use the first variantPrice's price, or fallback to 0
             const price = item.variant.variantPrices[0]?.price || 0;
             return total + price * item.quantity;
           }, 0)
         ),
-        isCompleted: item.isCompleted ? "Completed" : "Failed",
-        gstnumber: item.gstNumber ? item.gstNumber : "Not provided",
+        gstnumber: item.gstNumber || "Not provided",
         createdAt: format(item.createdAt, "MMMM do, yyyy"),
       };
     })

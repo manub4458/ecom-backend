@@ -12,6 +12,17 @@ enum MediaType {
   VIDEO
 }
 
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  OUTOFDELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+  REFUNDED
+}
+
 model User {
   id            String       @id @default(auto()) @map("_id") @db.ObjectId
   name          String
@@ -315,18 +326,24 @@ model ReviewVideo {
 }
 
 model Order {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  storeId     String      @db.ObjectId
-  store       Store       @relation("StoreToOrder", fields: [storeId], references: [id], onDelete: Cascade)
-  orderItems  OrderItem[]
-  isPaid      Boolean     @default(false)
-  phone       String      @default("")
-  address     String      @default("")
-  orderNumber String?     @unique
-  isCompleted Boolean     @default(false)
-  gstNumber   String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                    String      @id @default(auto()) @map("_id") @db.ObjectId
+  storeId               String      @db.ObjectId
+  store                 Store       @relation("StoreToOrder", fields: [storeId], references: [id], onDelete: Cascade)
+  orderItems            OrderItem[]
+  isPaid                Boolean     @default(false)
+  phone                 String      @default("")
+  address               String      @default("")
+  orderNumber           String?     @unique
+  isCompleted           Boolean     @default(false)
+  gstNumber             String?
+  status                OrderStatus @default(PENDING)
+  estimatedDeliveryDays Int?        @default(3)
+  customerId            String?
+  customerName          String?
+  customerEmail         String?
+  zipCode               String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
 
   @@index([storeId])
 }
