@@ -26,6 +26,7 @@ const LocationsPage = async ({ params }: { params: { storeId: string } }) => {
     state: item.state,
     country: item.country,
     isCodAvailable: item.isCodAvailable,
+    isExpressDelivery: item.isExpressDelivery ?? false,
     deliveryDays: item.deliveryDays ?? 0,
     createdAt: format(item.createdAt, "MMMM do, yyyy"),
   }));

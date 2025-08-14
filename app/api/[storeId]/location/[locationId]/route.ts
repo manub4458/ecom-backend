@@ -14,8 +14,16 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    const { pincode, city, state, country, isCodAvailable, deliveryDays } =
-      await request.json();
+    const {
+      pincode,
+      city,
+      state,
+      country,
+      isCodAvailable,
+      deliveryDays,
+      isExpressDelivery,
+      expressDeliveryText,
+    } = await request.json();
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -76,6 +84,8 @@ export async function PATCH(
         country,
         isCodAvailable,
         deliveryDays,
+        isExpressDelivery,
+        expressDeliveryText,
       },
     });
 

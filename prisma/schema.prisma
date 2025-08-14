@@ -90,18 +90,20 @@ model Store {
 }
 
 model Location {
-  id             String         @id @default(auto()) @map("_id") @db.ObjectId
-  storeId        String         @db.ObjectId
-  store          Store          @relation("StoreToLocation", fields: [storeId], references: [id], onDelete: Cascade)
-  pincode        String         @unique
-  city           String
-  state          String
-  country        String
-  isCodAvailable Boolean        @default(false)
-  deliveryDays   Int?           @default(1)
-  variantPrices  VariantPrice[] @relation("LocationToVariantPrice")
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                  String         @id @default(auto()) @map("_id") @db.ObjectId
+  storeId             String         @db.ObjectId
+  store               Store          @relation("StoreToLocation", fields: [storeId], references: [id], onDelete: Cascade)
+  pincode             String         @unique
+  city                String
+  state               String
+  country             String
+  isCodAvailable      Boolean        @default(false)
+  isExpressDelivery   Boolean?       @default(false)
+  expressDeliveryText String?
+  deliveryDays        Int?           @default(1)
+  variantPrices       VariantPrice[] @relation("LocationToVariantPrice")
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   @@unique([storeId, pincode, city, state, country])
   @@index([storeId])

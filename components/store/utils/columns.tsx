@@ -282,6 +282,7 @@ export type LocationColumn = {
   createdAt: string;
   isCodAvailable: boolean;
   deliveryDays: number;
+  isExpressDelivery: boolean;
 };
 
 export const locationColumns: ColumnDef<LocationColumn>[] = [
@@ -309,6 +310,11 @@ export const locationColumns: ColumnDef<LocationColumn>[] = [
     accessorKey: "isCodAvailable",
     header: "COD Available",
     cell: ({ row }) => (row.original.isCodAvailable ? "Yes" : "No"),
+  },
+  {
+    accessorKey: "isExpressDelivery",
+    header: "Express Delivery Available",
+    cell: ({ row }) => (row.original.isExpressDelivery ? "Yes" : "No"),
   },
   {
     accessorKey: "createdAt",

@@ -7,8 +7,16 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { pincode, city, state, country, isCodAvailable, deliveryDays } =
-      await request.json();
+    const {
+      pincode,
+      city,
+      state,
+      country,
+      isCodAvailable,
+      deliveryDays,
+      isExpressDelivery,
+      expressDeliveryText,
+    } = await request.json();
     const session = await auth();
 
     if (!session) {
@@ -62,6 +70,8 @@ export async function POST(
         country,
         isCodAvailable,
         deliveryDays,
+        isExpressDelivery,
+        expressDeliveryText,
         storeId: params.storeId,
       },
     });
