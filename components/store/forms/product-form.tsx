@@ -163,6 +163,7 @@ export const ProductForm = ({
               colorId: undefined,
               sku: "",
               hsn: "",
+              gstIn: "",
               variantPrices: [],
             },
           ],

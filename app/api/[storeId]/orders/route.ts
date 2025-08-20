@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generateOrderNumber } from "@/lib/utils";
+import { generateInvoiceNumber, generateOrderNumber } from "@/lib/utils";
 
 const allowedOrigins = [
   process.env.NEXT_PUBLIC_FRONTEND_URL,
@@ -38,17 +38,25 @@ export async function POST(
       isPaid,
       isCompleted,
       gstNumber,
+      discount,
       zipCode,
       customerId,
       customerName,
       customerEmail,
     }: {
-      orderItems: { variantId: string; quantity: number }[];
+      orderItems: {
+        variantId: string;
+        quantity: number;
+        price: number;
+        mrp: number;
+        name: string;
+      }[];
       phone: string;
       address: string;
       isPaid?: boolean;
       isCompleted?: boolean;
       gstNumber?: string;
+      discount?: number;
       zipCode?: string;
       customerId?: string;
       customerName?: string;
@@ -121,6 +129,14 @@ export async function POST(
       return new NextResponse(error.message, { status: 500 });
     }
 
+    let invoiceNumber: string;
+    try {
+      invoiceNumber = await generateInvoiceNumber();
+    } catch (error: any) {
+      console.error("Invoice number generation error:", error.message);
+      return new NextResponse(error.message, { status: 500 });
+    }
+
     const order = await db.order.create({
       data: {
         storeId: params.storeId,
@@ -129,8 +145,10 @@ export async function POST(
         isPaid: isPaid ?? false,
         isCompleted: isCompleted ?? false,
         gstNumber,
+        discount: discount,
         orderNumber,
-        status: "PENDING", // Initial status
+        invoiceNumber,
+        status: "PENDING",
         estimatedDeliveryDays,
         customerId,
         customerName,
@@ -140,9 +158,28 @@ export async function POST(
           create: orderItems.map((item) => ({
             variantId: item.variantId,
             quantity: item.quantity,
+            price: item.price,
+            mrp: item.mrp,
+            name: item.name,
           })),
         },
       },
+      include: {
+        orderItems: {
+          include: {
+            variant: true,
+          },
+        },
+      },
+    });
+
+    await db.$transaction(async (prisma) => {
+      for (const item of orderItems) {
+        await prisma.variant.update({
+          where: { id: item.variantId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
     });
 
     return NextResponse.json(

@@ -25,6 +25,7 @@ interface VariantFormProps {
     media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
     sku?: string;
     hsn?: string;
+    gstIn?: string;
     variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
   }>;
   onChange: (
@@ -36,6 +37,7 @@ interface VariantFormProps {
       media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
       sku?: string;
       hsn?: string;
+      gstIn?: string;
       variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
     }>
   ) => void;
@@ -83,6 +85,7 @@ export default function VariantForm({
         media: [],
         sku: "",
         hsn: "",
+        gstIn: "",
         sizeId: null,
         colorId: null,
         variantPrices: [
@@ -234,6 +237,17 @@ export default function VariantForm({
                   updateVariant(variantIndex, { hsn: e.target.value })
                 }
                 placeholder="Enter HSN Code"
+                disabled={loading}
+              />
+              <label className="block text-sm font-medium mb-1">
+                GSTIN Number
+              </label>
+              <Input
+                value={variant.gstIn || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, { gstIn: e.target.value })
+                }
+                placeholder="Enter GSTIN Number"
                 disabled={loading}
               />
             </div>

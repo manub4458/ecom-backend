@@ -41,7 +41,9 @@ const Editor: React.FC<EditorProps> = ({ value, onChange, disabled }) => {
               status: response.status,
               responseText: text || "No response body",
             });
-            throw new Error(`Failed to upload image: ${response.status} ${response.statusText}`);
+            throw new Error(
+              `Failed to upload image: ${response.status} ${response.statusText}`
+            );
           }
 
           const text = await response.text();
@@ -61,7 +63,63 @@ const Editor: React.FC<EditorProps> = ({ value, onChange, disabled }) => {
           }
         } catch (error) {
           console.error("Image upload error:", error);
-          toast.error(error instanceof Error ? error.message : "Failed to upload image");
+          toast.error(
+            error instanceof Error ? error.message : "Failed to upload image"
+          );
+        }
+      }
+    };
+  };
+
+  const videoHandler = () => {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "video/*"); // Restrict to video files
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (file) {
+        const formData = new FormData();
+        formData.append("video", file); // Match the key expected by /api/upload-video
+
+        try {
+          const response = await fetch("/api/upload-video", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const text = await response.text();
+            console.error("Video upload API error:", {
+              status: response.status,
+              responseText: text || "No response body",
+            });
+            throw new Error(
+              `Failed to upload video: ${response.status} ${response.statusText}`
+            );
+          }
+
+          const text = await response.text();
+          if (!text) {
+            throw new Error("Empty response from server");
+          }
+
+          const data = JSON.parse(text);
+          const videoUrl = data.url;
+
+          const quill = quillRef.current;
+          if (quill) {
+            const range = quill.getSelection(true); // Ensure cursor position is captured
+            if (range) {
+              quill.insertEmbed(range.index, "video", videoUrl);
+            }
+          }
+        } catch (error) {
+          console.error("Video upload error:", error);
+          toast.error(
+            error instanceof Error ? error.message : "Failed to upload video"
+          );
         }
       }
     };
@@ -81,6 +139,7 @@ const Editor: React.FC<EditorProps> = ({ value, onChange, disabled }) => {
             ],
             handlers: {
               image: imageHandler,
+              video: videoHandler, // Add video handler
             },
           },
         },

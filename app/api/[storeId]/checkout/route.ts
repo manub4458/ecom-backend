@@ -111,7 +111,7 @@ export async function POST(
       notes: {
         id: orderId,
         locationIds: JSON.stringify(products.map((p) => p.locationId)),
-        discount: discount.toString(), // Optionally include discount in notes for reference
+        discount: discount.toString(),
       },
     });
 

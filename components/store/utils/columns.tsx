@@ -481,34 +481,30 @@ export const orderColumns: ColumnDef<OrderColumn>[] = [
       </div>
     ),
   },
-  {
-    accessorKey: "phone",
-    header: "Phone",
-  },
-  {
-    accessorKey: "address",
-    header: "Address",
-    cell: ({ row }) => (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="link"
-            className="p-0 h-auto font-normal max-w-52 w-full truncate text-left justify-start"
-          >
-            {row.original.address || "No address provided"}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80">
-          <div className="space-y-2">
-            <h4 className="font-medium">Full Address</h4>
-            <p className="text-sm text-muted-foreground">
-              {row.original.address || "No address provided"}
-            </p>
-          </div>
-        </PopoverContent>
-      </Popover>
-    ),
-  },
+  // {
+  //   accessorKey: "address",
+  //   header: "Address",
+  //   cell: ({ row }) => (
+  //     <Popover>
+  //       <PopoverTrigger asChild>
+  //         <Button
+  //           variant="link"
+  //           className="p-0 h-auto font-normal max-w-52 w-full truncate text-left justify-start"
+  //         >
+  //           {row.original.address || "No address provided"}
+  //         </Button>
+  //       </PopoverTrigger>
+  //       <PopoverContent className="w-80">
+  //         <div className="space-y-2">
+  //           <h4 className="font-medium">Full Address</h4>
+  //           <p className="text-sm text-muted-foreground">
+  //             {row.original.address || "No address provided"}
+  //           </p>
+  //         </div>
+  //       </PopoverContent>
+  //     </Popover>
+  //   ),
+  // },
   {
     accessorKey: "totalPrice",
     header: "Total Price",
@@ -525,15 +521,15 @@ export const orderColumns: ColumnDef<OrderColumn>[] = [
     accessorKey: "customerName",
     header: "Customer Name",
   },
-  {
-    accessorKey: "customerEmail",
-    header: "Customer Email",
-  },
+  // {
+  //   accessorKey: "customerEmail",
+  //   header: "Customer Email",
+  // },
 
-  {
-    accessorKey: "gstnumber",
-    header: "GST Number",
-  },
+  // {
+  //   accessorKey: "gstnumber",
+  //   header: "GST Number",
+  // },
   {
     accessorKey: "createdAt",
     header: "Date",

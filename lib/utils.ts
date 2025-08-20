@@ -65,3 +65,43 @@ export async function generateOrderNumber(
 
   return orderNumber;
 }
+
+export async function generateInvoiceNumber(
+  index: number = Math.floor(Math.random() * 100000)
+): Promise<string> {
+  const prefix = "Retail";
+  const suffix = (index % 100000).toString().padStart(5, "0");
+  let invoiceNumber = `${prefix}${suffix}`;
+
+  let isUnique = false;
+  let attempts = 0;
+  const maxAttempts = 100;
+
+  do {
+    const existingOrder = await db.order.findUnique({
+      where: { invoiceNumber },
+    });
+
+    isUnique = !existingOrder;
+    attempts++;
+    if (!isUnique) {
+      console.warn(
+        `Invoice number ${invoiceNumber} already exists, retrying... (Attempt ${attempts})`
+      );
+      const newIndex = Math.floor(Math.random() * 100000);
+      const newSuffix = (newIndex % 100000).toString().padStart(5, "0");
+      invoiceNumber = `${prefix}${newSuffix}`;
+    }
+  } while (!isUnique && attempts < maxAttempts);
+
+  if (!isUnique) {
+    console.error(
+      "Failed to generate a unique invoice number after maximum attempts"
+    );
+    throw new Error(
+      "Failed to generate a unique invoice number after maximum attempts"
+    );
+  }
+
+  return invoiceNumber;
+}

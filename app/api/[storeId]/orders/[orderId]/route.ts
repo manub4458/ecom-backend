@@ -96,29 +96,6 @@ export async function PATCH(
   }
 }
 
-// export async function GET(
-//   request: Request,
-//   { params }: { params: { orderId: string } }
-// ) {
-//   try {
-//     const order = await db.order.findUnique({
-//       where: { id: params.orderId },
-//       include: { orderItems: true }, // Add more includes if needed
-//     });
-
-//     if (!order) {
-//       return new NextResponse("Order not found", { status: 404 });
-//     }
-
-//     return NextResponse.json(order);
-//   } catch (error) {
-//     console.error("BACKEND ORDER GET API", error);
-//     return new NextResponse("Internal server error", { status: 500 });
-//   }
-// }
-
-// backend: pages/api/orders/[orderId].ts
-
 export async function GET(
   request: Request,
   { params }: { params: { orderId: string } }
