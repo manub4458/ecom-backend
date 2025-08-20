@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { CldUploadWidget } from "next-cloudinary";
 import { Button } from "@/components/ui/button";
-import { ImagePlusIcon, Trash } from "lucide-react";
+import { ImagePlusIcon, Trash, Grip } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -65,15 +65,25 @@ const SortableMediaItem = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className="relative w-[200px] h-[220px] rounded-md overflow-hidden border-2 border-transparent hover:border-blue-500 transition touch-none"
+      className="relative w-[200px] h-[220px] rounded-md overflow-hidden border-2 border-transparent transition"
     >
+      <div
+        {...listeners}
+        className="z-10 absolute top-2 left-2 cursor-grab active:cursor-grabbing"
+      >
+        <span className="bg-white p-1 flex rounded-lg">
+          <Grip className="h-5 w-5 text-black" />
+        </span>
+      </div>
       <div className="z-10 absolute top-2 right-2">
         <Button
           variant="destructive"
           size="icon"
           type="button"
-          onClick={() => onRemove(media.url)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(media.url);
+          }}
           disabled={disabled || loading}
         >
           <Trash className="h-4 w-4" />

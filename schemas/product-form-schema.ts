@@ -25,7 +25,10 @@ export const VariantSchema = z
       .min(1, "At least one media item is required"),
     sku: z.string().optional(),
     hsn: z.string().optional(),
-    gstIn: z.string().optional(),
+    gstIn: z
+      .string()
+      .optional()
+      .transform((val) => (val === null ? "" : val)),
     variantPrices: z
       .array(
         z.object({
@@ -60,7 +63,7 @@ export const ProductSchema = z.object({
   brandId: z.string().nullable().optional(),
   about: z.string().optional(),
   description: z.string().min(1, "Description is required"),
-  sizeAndFit: z.array(z.string()).optional(),
+  // sizeAndFit: z.array(z.string()).optional(),
   materialAndCare: z.array(z.string()).optional(),
   enabledFeatures: z.array(z.string()).optional(),
   expressDelivery: z.boolean().default(false),

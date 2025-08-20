@@ -25,7 +25,7 @@ export async function PATCH(
       brandId,
       about,
       description,
-      sizeAndFit,
+      // sizeAndFit,
       materialAndCare,
       enabledFeatures,
       expressDelivery,
@@ -181,7 +181,7 @@ export async function PATCH(
         brandId,
         about,
         description,
-        sizeAndFit,
+        // sizeAndFit,
         materialAndCare,
         enabledFeatures,
         expressDelivery,
@@ -203,58 +203,62 @@ export async function PATCH(
           })),
         },
         variants: {
-          upsert: variants.map((variant) => ({
-            where: { id: variant.id || "non-existent-id" },
-            update: {
-              stock: variant.stock,
-              sku: variant.sku || undefined,
-              hsn: variant.hsn || undefined,
-              gstIn: variant.gstIn || undefined,
-              sizeId: variant.sizeId === null ? null : variant.sizeId,
-              colorId: variant.colorId === null ? null : variant.colorId,
-              images: {
-                deleteMany: {},
-                create: variant.media.map((image) => ({
-                  url: image.url,
-                  mediaType: image.mediaType || "IMAGE", // Default to IMAGE for compatibility
-                })),
-              },
-              variantPrices: {
-                deleteMany: {},
-                create: variant.variantPrices?.map((vp) => ({
-                  locationId: vp.locationId,
-                  price: vp.price,
-                  mrp: vp.mrp,
-                })),
-              },
-            },
-            create: {
-              stock: variant.stock,
-              sku: variant.sku || undefined,
-              hsn: variant.hsn || undefined,
-              gstIn: variant.gstIn || undefined,
-              sizeId: variant.sizeId === null ? null : variant.sizeId,
-              colorId: variant.colorId === null ? null : variant.colorId,
-              images: {
-                create: variant.media.map((image) => ({
-                  url: image.url,
-                  mediaType: image.mediaType || "IMAGE", // Default to IMAGE for compatibility
-                })),
-              },
-              variantPrices: {
-                create: variant.variantPrices?.map((vp) => ({
-                  locationId: vp.locationId,
-                  price: vp.price,
-                  mrp: vp.mrp,
-                })),
-              },
-            },
-          })),
           deleteMany: {
             id: {
               notIn: variants.filter((v) => v.id).map((v) => v.id as string),
             },
           },
+          create: variants
+            .filter((v) => !v.id)
+            .map((variant) => ({
+              stock: variant.stock,
+              sku: variant.sku || undefined,
+              hsn: variant.hsn || undefined,
+              gstIn: variant.gstIn || undefined,
+              sizeId: variant.sizeId === null ? null : variant.sizeId,
+              colorId: variant.colorId === null ? null : variant.colorId,
+              images: {
+                create: variant.media.map((image) => ({
+                  url: image.url,
+                  mediaType: image.mediaType || "IMAGE",
+                })),
+              },
+              variantPrices: {
+                create: variant.variantPrices?.map((vp) => ({
+                  locationId: vp.locationId,
+                  price: vp.price,
+                  mrp: vp.mrp,
+                })),
+              },
+            })),
+          update: variants
+            .filter((v) => v.id)
+            .map((variant) => ({
+              where: { id: variant.id! },
+              data: {
+                stock: variant.stock,
+                sku: variant.sku || undefined,
+                hsn: variant.hsn || undefined,
+                gstIn: variant.gstIn || undefined,
+                sizeId: variant.sizeId === null ? null : variant.sizeId,
+                colorId: variant.colorId === null ? null : variant.colorId,
+                images: {
+                  deleteMany: {},
+                  create: variant.media.map((image) => ({
+                    url: image.url,
+                    mediaType: image.mediaType || "IMAGE",
+                  })),
+                },
+                variantPrices: {
+                  deleteMany: {},
+                  create: variant.variantPrices?.map((vp) => ({
+                    locationId: vp.locationId,
+                    price: vp.price,
+                    mrp: vp.mrp,
+                  })),
+                },
+              },
+            })),
         },
       },
       include: {

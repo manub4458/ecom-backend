@@ -31,7 +31,7 @@ export async function POST(
       brandId,
       about,
       description,
-      sizeAndFit,
+      // sizeAndFit,
       materialAndCare,
       enabledFeatures,
       expressDelivery,
@@ -178,7 +178,7 @@ export async function POST(
         brandId,
         about,
         description,
-        sizeAndFit,
+        // sizeAndFit,
         materialAndCare,
         enabledFeatures,
         expressDelivery,
@@ -204,7 +204,7 @@ export async function POST(
             images: {
               create: variant.media.map((media) => ({
                 url: media.url,
-                mediaType: media.mediaType || "IMAGE", // Default to IMAGE for compatibility
+                mediaType: media.mediaType || "IMAGE",
               })),
             },
             variantPrices: {

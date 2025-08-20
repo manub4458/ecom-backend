@@ -239,6 +239,8 @@ export default function VariantForm({
                 placeholder="Enter HSN Code"
                 disabled={loading}
               />
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">
                 GSTIN Number
               </label>
