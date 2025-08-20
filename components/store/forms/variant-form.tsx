@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Size, Color, Location } from "@prisma/client";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImageUpload } from "@/components/store/utils/image-upload";
 import { toast } from "sonner";
 import { MediaUpload } from "@/components/store/utils/media-upload";
 
@@ -45,6 +44,48 @@ interface VariantFormProps {
   colors: Color[];
   locations: Location[];
 }
+
+interface NumberInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  min?: number;
+  step?: number;
+}
+
+const NumberInput = ({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+  min,
+  step,
+}: NumberInputProps) => {
+  const [localValue, setLocalValue] = useState(value.toString());
+
+  useEffect(() => {
+    setLocalValue(value.toString());
+  }, [value]);
+
+  return (
+    <Input
+      type="number"
+      min={min}
+      step={step}
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={() => {
+        const num = parseInt(localValue) || 0;
+        setLocalValue(num.toString());
+        onChange(num);
+      }}
+      onFocus={(e) => e.target.select()}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  );
+};
 
 export default function VariantForm({
   value,
@@ -204,16 +245,13 @@ export default function VariantForm({
 
             <div>
               <label className="block text-sm font-medium mb-1">Stock</label>
-              <Input
-                type="number"
+              <NumberInput
                 value={variant.stock}
-                onChange={(e) =>
-                  updateVariant(variantIndex, {
-                    stock: parseInt(e.target.value) || 0,
-                  })
-                }
+                onChange={(num) => updateVariant(variantIndex, { stock: num })}
                 placeholder="Enter stock"
                 disabled={loading}
+                min={0}
+                step={1}
               />
             </div>
 
@@ -323,34 +361,36 @@ export default function VariantForm({
                     <label className="block text-sm font-medium mb-1">
                       Price (INR)
                     </label>
-                    <Input
-                      type="number"
+                    <NumberInput
                       value={price.price}
-                      onChange={(e) =>
+                      onChange={(num) =>
                         updatePrice(variantIndex, priceIndex, {
                           ...price,
-                          price: parseInt(e.target.value) || 0,
+                          price: num,
                         })
                       }
                       placeholder="Enter price"
                       disabled={loading}
+                      min={0}
+                      step={1}
                     />
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-medium mb-1">
                       MRP (INR)
                     </label>
-                    <Input
-                      type="number"
+                    <NumberInput
                       value={price.mrp}
-                      onChange={(e) =>
+                      onChange={(num) =>
                         updatePrice(variantIndex, priceIndex, {
                           ...price,
-                          mrp: parseInt(e.target.value) || 0,
+                          mrp: num,
                         })
                       }
                       placeholder="Enter MRP"
                       disabled={loading}
+                      min={0}
+                      step={1}
                     />
                   </div>
                   <Button
