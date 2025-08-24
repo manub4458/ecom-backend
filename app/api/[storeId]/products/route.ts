@@ -334,7 +334,7 @@ export async function GET(
           headers,
         });
       }
-      // Optionally, ensure subCategory belongs to categoryId if both are provided
+      // Ensure subCategory belongs to categoryId if both are provided
       if (categoryId && subCategory.categoryId !== categoryId) {
         console.log("Subcategory does not belong to specified category", {
           subCategoryId,
@@ -495,6 +495,7 @@ export async function GET(
 
     const skip = (page - 1) * limit;
 
+    // Fetch paginated products
     const products = await db.product.findMany({
       where,
       include: {
@@ -542,6 +543,9 @@ export async function GET(
       take: limit,
     });
 
+    // Fetch total count for pagination
+    const totalCount = await db.product.count({ where });
+
     const productsWithRatings = products.map((product) => {
       const ratings = product.reviews.map((review) => review.rating);
       const numberOfRatings = ratings.length;
@@ -562,7 +566,13 @@ export async function GET(
       `Found ${products.length} products for storeId: ${params.storeId}, brandId: ${brandId}, categoryId: ${categoryId}, subCategoryId: ${subCategoryId}`
     );
 
-    return NextResponse.json(productsWithRatings, { headers });
+    return NextResponse.json(
+      {
+        products: productsWithRatings,
+        totalCount,
+      },
+      { headers }
+    );
   } catch (error) {
     console.log("[PRODUCTS_GET]", error);
     return new NextResponse("Internal server error", { status: 500, headers });
