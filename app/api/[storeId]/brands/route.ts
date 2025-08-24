@@ -7,7 +7,8 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { name, slug, bannerImage, cardImage } = await request.json();
+    const { name, slug, bannerImage, cardImage, description } =
+      await request.json();
     const session = await auth();
 
     if (!session) {
@@ -53,6 +54,7 @@ export async function POST(
         name,
         slug,
         bannerImage,
+        description,
         cardImage,
         storeId: params.storeId,
       },

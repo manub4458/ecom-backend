@@ -8,7 +8,8 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    const { name, slug, bannerImage, cardImage } = await request.json();
+    const { name, slug, bannerImage, cardImage, description } =
+      await request.json();
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -61,6 +62,7 @@ export async function PATCH(
         name,
         slug,
         bannerImage,
+        description,
         cardImage,
       },
     });

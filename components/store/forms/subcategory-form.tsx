@@ -68,6 +68,7 @@ export const SubCategoryForm = ({
           name: initialData.name,
           slug: initialData.slug || "",
           bannerImage: initialData.bannerImage,
+          description: initialData.description || "",
           icon: initialData.icon || "",
           categoryId: initialData.categoryId,
           parentId: initialData.parentId || undefined,
@@ -84,6 +85,7 @@ export const SubCategoryForm = ({
           slug: "",
           icon: "",
           bannerImage: "",
+          description: "",
           categoryId: "",
           parentId: undefined,
           reviewCategories: [],
@@ -276,6 +278,23 @@ export const SubCategoryForm = ({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripiton</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Enter Description"
+                    />
+                  </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}

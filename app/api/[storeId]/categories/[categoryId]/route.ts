@@ -16,7 +16,7 @@ export async function PATCH(
       return new NextResponse("Invalid data provided", { status: 400 });
     }
 
-    const { name, slug, bannerImage, landingPageBanner } = validatedData.data;
+    const { name, slug, bannerImage, landingPageBanner, description } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
       return new NextResponse("Unauthorized Access", { status: 401 });
@@ -49,6 +49,7 @@ export async function PATCH(
         slug,
         landingPageBanner,
         bannerImage,
+        description,
       },
     });
 

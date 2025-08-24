@@ -12,6 +12,7 @@ export const BrandFormSchema = z.object({
   bannerImage: z.string().min(1, {
     message: "Banner Image is required",
   }),
+  description: z.string().optional(),
   cardImage: z.string().min(1, {
     message: "Card Image is required",
   }),

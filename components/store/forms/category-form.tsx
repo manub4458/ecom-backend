@@ -49,12 +49,14 @@ export const CategoryForm = ({ data }: CategoryFormProps) => {
           name: data.name,
           slug: data.slug || "",
           bannerImage: data.bannerImage,
+          description: data.description || "",
           landingPageBanner: data.landingPageBanner || "",
         }
       : {
           name: "",
           slug: "",
           bannerImage: "",
+          description: "",
           landingPageBanner: "",
         },
   });
@@ -169,6 +171,23 @@ export const CategoryForm = ({ data }: CategoryFormProps) => {
                     The slug must be unique, contain only lowercase letters,
                     numbers, and hyphens, and be at most 60 characters long.
                   </FormDescription>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripiton</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Enter Description"
+                    />
+                  </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}

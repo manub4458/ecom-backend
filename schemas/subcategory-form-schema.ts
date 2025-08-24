@@ -13,6 +13,7 @@ export const SubCategorySchema = z.object({
     ),
   bannerImage: z.string().url("Invalid URL").min(1, "Banner image is required"),
   icon: z.string().optional(),
+  description: z.string().optional(),
   categoryId: z.string().min(1, "Category is required"),
   parentId: z.string().optional(),
   reviewCategories: z

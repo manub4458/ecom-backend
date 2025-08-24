@@ -172,6 +172,7 @@ model Category {
   slug              String        @unique
   bannerImage       String
   landingPageBanner String?
+  description       String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
@@ -191,6 +192,7 @@ model SubCategory {
   slug               String        @unique
   name               String
   bannerImage        String
+  description        String?
   reviewCategories   Json[]        @default([])
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
@@ -232,6 +234,7 @@ model Brand {
   name        String
   slug        String    @unique
   bannerImage String
+  description String?
   cardImage   String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

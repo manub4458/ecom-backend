@@ -15,5 +15,6 @@ export const CategoryFormSchema = z.object({
   bannerImage: z.string().min(1, {
     message: "Banner Image is required",
   }),
+  description: z.string().optional(),
   landingPageBanner: z.string().optional(),
 });

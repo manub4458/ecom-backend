@@ -48,9 +48,10 @@ export const BrandForm = ({ data }: BrandFormProps) => {
           name: data.name,
           slug: data.slug,
           bannerImage: data.bannerImage,
+          description: data.description || "",
           cardImage: data.cardImage,
         }
-      : { name: "", slug: "", bannerImage: "", cardImage: "" },
+      : { name: "", slug: "", bannerImage: "", cardImage: "", description: "" },
   });
 
   const onSubmit = async (values: z.infer<typeof BrandFormSchema>) => {
@@ -149,6 +150,23 @@ export const BrandForm = ({ data }: BrandFormProps) => {
                       {...field}
                       disabled={loading}
                       placeholder="Brand slug"
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descripiton</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Enter Description"
                     />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
