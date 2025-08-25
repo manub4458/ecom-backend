@@ -36,7 +36,7 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
           images: true,
           variantPrices: {
             include: {
-              location: true,
+              locationGroup: true,
             },
           },
         },
@@ -65,7 +65,7 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
     },
   });
 
-  const defaultLocation = await db.location.findFirst({
+  const defaultLocationGroup = await db.locationGroup.findFirst({
     where: {
       storeId: params.storeId,
     },
@@ -74,7 +74,7 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
   const formattedProducts: ProductColumn[] = products.map((product) => {
     const firstVariant = product.variants[0];
     const firstPrice = firstVariant?.variantPrices.find(
-      (vp) => vp.locationId === defaultLocation?.id
+      (vp) => vp.locationGroupId === defaultLocationGroup?.id
     );
     const price = firstPrice?.price?.toString() || "N/A";
     const stock = firstVariant?.stock || 0;

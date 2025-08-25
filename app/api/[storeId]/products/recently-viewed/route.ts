@@ -12,19 +12,20 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   const origin = request.headers.get("origin");
-
-  // Determine if the origin is allowed
   const corsOrigin = allowedOrigins.includes(origin ?? "")
     ? origin ?? ""
     : allowedOrigins[0];
 
-  // Set CORS headers
   const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Origin": corsOrigin || "",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
   };
+
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
 
   try {
     if (!params.storeId) {
@@ -32,7 +33,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { productIds, locationId } = body;
+    const { productIds, locationGroupId } = body;
 
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
       return new NextResponse(
@@ -61,9 +62,9 @@ export async function POST(
             color: true,
             images: true,
             variantPrices: {
-              where: locationId ? { locationId } : undefined,
+              where: locationGroupId ? { locationGroupId } : undefined,
               include: {
-                location: true,
+                locationGroup: true,
               },
             },
           },
@@ -88,7 +89,7 @@ export async function POST(
       },
     });
 
-    // Map products to include ratings, consistent with your GET endpoint
+    // Map products to include ratings
     const productsWithRatings = products.map((product) => {
       const ratings = product.reviews.map((review) => review.rating);
       const numberOfRatings = ratings.length;

@@ -14,6 +14,7 @@ import {
   FileText,
   Settings,
   MapPin,
+  Group,
   Star,
   Monitor,
   List,
@@ -107,6 +108,12 @@ export const SideNav = ({
         label: "Locations",
         active: pathname === `/${params.storeId}/location`,
         icon: MapPin,
+      },
+      {
+        href: `/${params.storeId}/location-group`,
+        label: "Location Groups",
+        active: pathname === `/${params.storeId}/location-group`,
+        icon: Group,
       },
       // {
       //   href: `/${params.storeId}/billboards`,

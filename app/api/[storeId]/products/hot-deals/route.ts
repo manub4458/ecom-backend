@@ -1,13 +1,35 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 export async function GET(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
+  const origin = request.headers.get("origin");
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  const headers = {
+    "Access-Control-Allow-Origin": corsOrigin || "",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
+
   try {
     if (!params.storeId) {
-      return new NextResponse("Store Id is required", { status: 400 });
+      return new NextResponse("Store Id is required", { status: 400, headers });
     }
 
     const { searchParams } = new URL(request.url);
@@ -34,22 +56,24 @@ export async function GET(
     } else if (timeFrame === "90 days") {
       startDate.setDate(startDate.getDate() - 90);
     } else if (timeFrame !== "all time") {
-      return new NextResponse("Invalid time frame", { status: 400 });
+      return new NextResponse("Invalid time frame", { status: 400, headers });
     }
 
-    // Find location based on pincode and storeId
-    let location = null;
+    // Find location group based on pincode and storeId
+    let locationGroup = null;
     if (pincode) {
-      location = await db.location.findFirst({
+      locationGroup = await db.location.findFirst({
         where: {
           storeId: params.storeId,
           pincode,
         },
+        select: {
+          locationGroupId: true,
+        },
       });
-      if (!location) {
-        console.log(`No location found for pincode: ${pincode}`);
-        // Optionally, return an error or proceed with default pricing
-        // return new NextResponse("Invalid pincode", { status: 400 });
+      if (!locationGroup) {
+        console.log(`No location group found for pincode: ${pincode}`);
+        // Optionally, proceed with default pricing
       }
     }
 
@@ -73,7 +97,7 @@ export async function GET(
     // Exit early if no orders found
     if (orderIds.length === 0) {
       console.log("No orders found in the specified time frame");
-      return NextResponse.json([]);
+      return NextResponse.json([], { headers });
     }
 
     // Aggregate sales by product through variants
@@ -121,10 +145,10 @@ export async function GET(
     // Exit early if no products found
     if (productIds.length === 0) {
       console.log("No hot deal products found after filtering");
-      return NextResponse.json([]);
+      return NextResponse.json([], { headers });
     }
 
-    // Fetch product details with variantPrices filtered by location
+    // Fetch product details with variantPrices filtered by location group
     const products = await db.product.findMany({
       where: {
         id: { in: productIds },
@@ -137,7 +161,6 @@ export async function GET(
         subCategory: {
           include: {
             parent: true,
-            // billboard: true,
           },
         },
         variants: {
@@ -146,9 +169,11 @@ export async function GET(
             color: true,
             images: true,
             variantPrices: {
-              where: location?.id ? { locationId: location.id } : undefined,
+              where: locationGroup?.locationGroupId
+                ? { locationGroupId: locationGroup.locationGroupId }
+                : undefined,
               include: {
-                location: true,
+                locationGroup: true,
               },
             },
           },
@@ -162,14 +187,27 @@ export async function GET(
             },
           },
         },
+        reviews: {
+          select: {
+            rating: true,
+          },
+        },
       },
     });
 
-    // Combine sales data with product details
+    // Combine sales data with product details and include ratings
     const result = paginatedProducts
       .map((item) => {
         const product = products.find((p) => p.id === item.productId);
         if (!product) return null;
+
+        // Calculate ratings
+        const ratings = product.reviews.map((review) => review.rating);
+        const numberOfRatings = ratings.length;
+        const averageRating =
+          numberOfRatings > 0
+            ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
+            : 0;
 
         // Map variants to include price from variantPrices
         const updatedVariants = product.variants.map((variant) => {
@@ -180,18 +218,21 @@ export async function GET(
           };
         });
 
+        const { reviews, ...productWithoutReviews } = product;
         return {
-          ...product,
+          ...productWithoutReviews,
           totalSold: item.totalSold,
           variants: updatedVariants,
+          averageRating: Number(averageRating.toFixed(2)),
+          numberOfRatings,
         };
       })
       .filter(Boolean);
 
     console.log(`Found ${result.length} hot deal products`);
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers });
   } catch (error) {
     console.log("[HOT_DEALS_GET]", error);
-    return new NextResponse("Internal server error", { status: 500 });
+    return new NextResponse("Internal server error", { status: 500, headers });
   }
 }

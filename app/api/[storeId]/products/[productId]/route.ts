@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { NextResponse } from "next/server";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 export async function PATCH(
   request: Request,
   { params }: { params: { storeId: string; productId: string } }
@@ -25,7 +31,6 @@ export async function PATCH(
       brandId,
       about,
       description,
-      // sizeAndFit,
       materialAndCare,
       enabledFeatures,
       expressDelivery,
@@ -156,17 +161,26 @@ export async function PATCH(
         }
       }
 
-      if (variant.variantPrices && variant.variantPrices.length > 0) {
-        const locationIds = variant.variantPrices.map((vp) => vp.locationId);
-        const locations = await db.location.findMany({
+      if (!variant.variantPrices || variant.variantPrices.length === 0) {
+        return new NextResponse(
+          "Each variant must have at least one price for a location group",
+          { status: 400 }
+        );
+      }
+
+      if (variant.variantPrices.length > 0) {
+        const locationGroupIds = variant.variantPrices.map(
+          (vp) => vp.locationGroupId
+        );
+        const locationGroups = await db.locationGroup.findMany({
           where: {
-            id: { in: locationIds },
+            id: { in: locationGroupIds },
             storeId: params.storeId,
           },
         });
-        if (locations.length !== locationIds.length) {
+        if (locationGroups.length !== locationGroupIds.length) {
           return new NextResponse(
-            "One or more location IDs in variant prices are invalid",
+            "One or more location group IDs in variant prices are invalid",
             { status: 400 }
           );
         }
@@ -181,7 +195,6 @@ export async function PATCH(
         brandId,
         about,
         description,
-        // sizeAndFit,
         materialAndCare,
         enabledFeatures,
         expressDelivery,
@@ -225,7 +238,7 @@ export async function PATCH(
               },
               variantPrices: {
                 create: variant.variantPrices?.map((vp) => ({
-                  locationId: vp.locationId,
+                  locationGroupId: vp.locationGroupId,
                   price: vp.price,
                   mrp: vp.mrp,
                 })),
@@ -252,7 +265,7 @@ export async function PATCH(
                 variantPrices: {
                   deleteMany: {},
                   create: variant.variantPrices?.map((vp) => ({
-                    locationId: vp.locationId,
+                    locationGroupId: vp.locationGroupId,
                     price: vp.price,
                     mrp: vp.mrp,
                   })),
@@ -268,7 +281,7 @@ export async function PATCH(
             images: true,
             variantPrices: {
               include: {
-                location: true,
+                locationGroup: true,
               },
             },
           },
@@ -341,17 +354,50 @@ export async function DELETE(
 
 export async function GET(
   request: Request,
-  { params }: { params: { productId: string } }
+  { params }: { params: { storeId?: string; productId: string } }
 ) {
+  const origin = request.headers.get("origin");
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  const headers = {
+    "Access-Control-Allow-Origin": corsOrigin || "",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
+
   try {
     if (!params.productId) {
-      return new NextResponse("Product ID is required", { status: 400 });
+      return new NextResponse("Product ID is required", {
+        status: 400,
+        headers,
+      });
     }
 
     const { searchParams } = new URL(request.url);
     const includeRelated = searchParams.get("includeRelated") === "true";
     const categoryId = searchParams.get("categoryId");
-    const locationId = searchParams.get("locationId");
+    const locationGroupId = searchParams.get("locationGroupId");
+    const pincode = searchParams.get("pincode");
+
+    let resolvedLocationGroupId = locationGroupId;
+    if (pincode && !locationGroupId) {
+      const location = await db.location.findUnique({
+        where: { pincode, storeId: params.storeId },
+        select: { locationGroupId: true },
+      });
+      if (!location) {
+        console.log("Invalid pincode", pincode);
+        return new NextResponse("Invalid pincode", { status: 404, headers });
+      }
+      resolvedLocationGroupId = location.locationGroupId;
+    }
 
     const product = await db.product.findUnique({
       where: {
@@ -372,9 +418,11 @@ export async function GET(
             color: true,
             images: true,
             variantPrices: {
-              where: locationId ? { locationId } : undefined,
+              where: resolvedLocationGroupId
+                ? { locationGroupId: resolvedLocationGroupId }
+                : undefined,
               include: {
-                location: true,
+                locationGroup: true,
               },
             },
           },
@@ -388,12 +436,31 @@ export async function GET(
             },
           },
         },
+        reviews: {
+          select: {
+            rating: true,
+          },
+        },
       },
     });
 
     if (!product) {
-      return new NextResponse("Product not found", { status: 404 });
+      return new NextResponse("Product not found", { status: 404, headers });
     }
+
+    // const ratings = product.reviews.map((review) => review.rating);
+    // const numberOfRatings = ratings.length;
+    // const averageRating =
+    //   numberOfRatings > 0
+    //     ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
+    //     : 0;
+
+    // const { reviews, ...productWithoutReviews } = product;
+    // const productWithRatings = {
+    //   ...productWithoutReviews,
+    //   averageRating: Number(averageRating.toFixed(2)),
+    //   numberOfRatings,
+    // };
 
     let relatedProducts: any[] = [];
     if (includeRelated && product.categoryId) {
@@ -417,9 +484,11 @@ export async function GET(
               color: true,
               images: true,
               variantPrices: {
-                where: locationId ? { locationId } : undefined,
+                where: resolvedLocationGroupId
+                  ? { locationGroupId: resolvedLocationGroupId }
+                  : undefined,
                 include: {
-                  location: true,
+                  locationGroup: true,
                 },
               },
             },
@@ -433,12 +502,32 @@ export async function GET(
               },
             },
           },
+          reviews: {
+            select: {
+              rating: true,
+            },
+          },
         },
         take: 4,
         orderBy: {
           createdAt: "desc",
         },
       });
+
+      // relatedProducts = relatedProducts.map((p) => {
+      //   const ratings = p.reviews.map((r) => r.rating);
+      //   const numberOfRatings = ratings.length;
+      //   const averageRating =
+      //     numberOfRatings > 0
+      //       ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
+      //       : 0;
+      //   const { reviews, ...rest } = p;
+      //   return {
+      //     ...rest,
+      //     averageRating: Number(averageRating.toFixed(2)),
+      //     numberOfRatings,
+      //   };
+      // });
     }
 
     const response = {
@@ -446,9 +535,9 @@ export async function GET(
       ...(includeRelated && { relatedProducts }),
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, { headers });
   } catch (error) {
     console.log("[PRODUCT_GET]", error);
-    return new NextResponse("Internal server error", { status: 500 });
+    return new NextResponse("Internal server error", { status: 500, headers });
   }
 }

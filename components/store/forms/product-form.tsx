@@ -12,7 +12,7 @@ import {
   SpecificationField,
   Variant,
   VariantImage,
-  Location,
+  LocationGroup,
 } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -68,7 +68,11 @@ interface ProductFormProps {
         brand: Brand | null;
         variants: (Variant & {
           images: (VariantImage & { mediaType: "IMAGE" | "VIDEO" })[];
-          variantPrices: { locationId: string; price: number; mrp: number }[];
+          variantPrices: {
+            locationGroupId: string;
+            price: number;
+            mrp: number;
+          }[];
         })[];
         productSpecifications: {
           specificationFieldId: string;
@@ -82,7 +86,7 @@ interface ProductFormProps {
   sizes: Size[];
   colors: Color[];
   specificationFields: (SpecificationField & { group: { name: string } })[];
-  locations: Location[];
+  locationGroups: LocationGroup[];
 }
 
 export const ProductForm = ({
@@ -93,7 +97,7 @@ export const ProductForm = ({
   sizes,
   colors,
   specificationFields,
-  locations,
+  locationGroups,
 }: ProductFormProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -117,7 +121,6 @@ export const ProductForm = ({
           about: data.about || "",
           description: data.description || "",
           materialAndCare: data.materialAndCare || [],
-          // sizeAndFit: data.sizeAndFit || [],
           enabledFeatures: data.enabledFeatures || [],
           expressDelivery: data.expressDelivery || false,
           warranty: data.warranty || "",
@@ -145,7 +148,6 @@ export const ProductForm = ({
           about: "",
           description: "",
           materialAndCare: [],
-          // sizeAndFit: [],
           enabledFeatures: [],
           expressDelivery: false,
           warranty: "",
@@ -164,7 +166,16 @@ export const ProductForm = ({
               sku: "",
               hsn: "",
               gstIn: "",
-              variantPrices: [],
+              variantPrices:
+                locationGroups.length > 0
+                  ? [
+                      {
+                        locationGroupId: locationGroups[0].id,
+                        price: 0,
+                        mrp: 0,
+                      },
+                    ]
+                  : [],
             },
           ],
           metaTitle: "",
@@ -175,18 +186,18 @@ export const ProductForm = ({
   });
 
   const onSubmit = async (values: z.infer<typeof ProductSchema>) => {
-    const requiredLocation = locations.find((loc) => loc.pincode === "110040");
-    if (!requiredLocation) {
-      toast.error("Required location with pincode 110040 not found.");
+    if (locationGroups.length === 0) {
+      toast.error("No location groups available. Please add at least one.");
       return;
     }
-    const hasRequiredPincode = values.variants.every((variant) =>
-      variant.variantPrices.some(
-        (price) => price.locationId === requiredLocation.id
-      )
+
+    const hasValidPrices = values.variants.every(
+      (variant) => variant.variantPrices.length > 0
     );
-    if (!hasRequiredPincode) {
-      toast.error("All variants must include a price for pincode 110040.");
+    if (!hasValidPrices) {
+      toast.error(
+        "Each variant must have at least one price for a location group."
+      );
       return;
     }
 
@@ -647,30 +658,6 @@ export const ProductForm = ({
               </FormItem>
             )}
           />
-          {/* <FormField
-            control={form.control}
-            name="sizeAndFit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Size and Fit</FormLabel>
-                <FormControl>
-                  <ProductFeatures
-                    value={field.value || []}
-                    disabled={loading}
-                    onChange={(value) =>
-                      field.onChange([...(field.value || []), value])
-                    }
-                    onRemove={(value) =>
-                      field.onChange(
-                        (field.value || []).filter((data) => data !== value)
-                      )
-                    }
-                  />
-                </FormControl>
-                <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-              </FormItem>
-            )}
-          /> */}
           <FormField
             control={form.control}
             name="materialAndCare"
@@ -749,7 +736,7 @@ export const ProductForm = ({
                     onChange={field.onChange}
                     sizes={sizes}
                     colors={colors}
-                    locations={locations}
+                    locationGroups={locationGroups}
                   />
                 </FormControl>
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />

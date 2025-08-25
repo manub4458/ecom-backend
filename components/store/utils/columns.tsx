@@ -11,7 +11,6 @@ import { ReviewCellActions } from "./review-cell-actions";
 import { LocationCellActions } from "./location-cell-actions";
 import { BrandCellActions } from "./brand-cell-actions";
 import { CouponCellActions } from "./coupon-cell-actions";
-// import { copyToClipboard } from "@/lib/utils";
 import {
   Popover,
   PopoverContent,
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { OrderCellActions } from "./orders-cell-actions";
+import { LocationGroupCellActions } from "./location-group-cell-actions";
 
 export type Billboard = {
   id: string;
@@ -95,6 +95,32 @@ export const brandColumns: ColumnDef<BrandColumn>[] = [
   {
     id: "actions",
     cell: ({ row }) => <BrandCellActions data={row.original} />,
+  },
+];
+
+export type LocationGroupColumn = {
+  id: string;
+  name: string;
+  locationCount: number;
+  createdAt: string;
+};
+
+export const locationGroupColumns: ColumnDef<LocationGroupColumn>[] = [
+  {
+    accessorKey: "name",
+    header: "Name",
+  },
+  {
+    accessorKey: "locationCount",
+    header: "Locations",
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created At",
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => <LocationGroupCellActions data={row.original} />,
   },
 ];
 

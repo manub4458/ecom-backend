@@ -28,7 +28,7 @@ const ProductPage = async ({
             images: true,
             variantPrices: {
               include: {
-                location: true,
+                locationGroup: true,
               },
             },
           },
@@ -88,7 +88,7 @@ const ProductPage = async ({
     },
   });
 
-  const locations = await db.location.findMany({
+  const locationGroups = await db.locationGroup.findMany({
     where: {
       storeId: params.storeId,
     },
@@ -105,7 +105,7 @@ const ProductPage = async ({
           sizes={sizes}
           colors={colors}
           specificationFields={specificationFields}
-          locations={locations}
+          locationGroups={locationGroups}
         />
       </div>
     </div>

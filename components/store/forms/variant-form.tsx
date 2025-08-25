@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Size, Color, Location } from "@prisma/client";
+import { Size, Color, LocationGroup } from "@prisma/client";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,11 @@ interface VariantFormProps {
     sku?: string;
     hsn?: string;
     gstIn?: string;
-    variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
+    variantPrices: Array<{
+      locationGroupId: string;
+      price: number;
+      mrp: number;
+    }>;
   }>;
   onChange: (
     value: Array<{
@@ -37,12 +41,16 @@ interface VariantFormProps {
       sku?: string;
       hsn?: string;
       gstIn?: string;
-      variantPrices: Array<{ locationId: string; price: number; mrp: number }>;
+      variantPrices: Array<{
+        locationGroupId: string;
+        price: number;
+        mrp: number;
+      }>;
     }>
   ) => void;
   sizes: Size[];
   colors: Color[];
-  locations: Location[];
+  locationGroups: LocationGroup[];
 }
 
 interface NumberInputProps {
@@ -92,31 +100,22 @@ export default function VariantForm({
   onChange,
   sizes,
   colors,
-  locations,
+  locationGroups,
 }: VariantFormProps) {
   const [loading, setLoading] = useState(false);
 
-  // Find the location with pincode 110040
-  const requiredLocation = locations.find((loc) => loc.pincode === "110040");
-
-  // Validate that all variants have a price for pincode 110040
+  // Validate that all variants have at least one price
   const validateVariants = () => {
-    if (!requiredLocation) {
-      toast.error("Required location with pincode 110040 not found.");
+    if (locationGroups.length === 0) {
+      toast.error("No location groups available. Please add at least one.");
       return false;
     }
-    return value.every((variant) =>
-      variant.variantPrices.some(
-        (price) => price.locationId === requiredLocation.id
-      )
-    );
+    return value.every((variant) => variant.variantPrices.length > 0);
   };
 
   const addVariant = () => {
-    if (!requiredLocation) {
-      toast.error(
-        "Cannot add variant: Location with pincode 110040 not found."
-      );
+    if (locationGroups.length === 0) {
+      toast.error("Cannot add variant: No location groups available.");
       return;
     }
     onChange([
@@ -131,7 +130,7 @@ export default function VariantForm({
         colorId: null,
         variantPrices: [
           {
-            locationId: requiredLocation.id,
+            locationGroupId: locationGroups[0].id,
             price: 0,
             mrp: 0,
           },
@@ -151,9 +150,13 @@ export default function VariantForm({
   };
 
   const addPrice = (variantIndex: number) => {
+    if (locationGroups.length === 0) {
+      toast.error("Cannot add price: No location groups available.");
+      return;
+    }
     const newVariants = [...value];
     newVariants[variantIndex].variantPrices.push({
-      locationId: locations[0]?.id || "",
+      locationGroupId: locationGroups[0].id,
       price: 0,
       mrp: 0,
     });
@@ -162,9 +165,8 @@ export default function VariantForm({
 
   const removePrice = (variantIndex: number, priceIndex: number) => {
     const newVariants = [...value];
-    const priceToRemove = newVariants[variantIndex].variantPrices[priceIndex];
-    if (requiredLocation && priceToRemove.locationId === requiredLocation.id) {
-      toast.error("Cannot remove price for required pincode 110040.");
+    if (newVariants[variantIndex].variantPrices.length <= 1) {
+      toast.error("Each variant must have at least one price.");
       return;
     }
     newVariants[variantIndex].variantPrices = newVariants[
@@ -293,22 +295,20 @@ export default function VariantForm({
             </div>
             <div className="mt-4 md:col-span-2">
               <div className="flex justify-between items-center mb-2">
-                <h4 className="font-medium">Prices by Location</h4>
+                <h4 className="font-medium">Prices by Location Group</h4>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => addPrice(variantIndex)}
-                  disabled={loading || locations.length === 0}
+                  disabled={loading || locationGroups.length === 0}
                 >
                   Add Price
                 </Button>
               </div>
-              {!variant.variantPrices.some(
-                (price) => price.locationId === requiredLocation?.id
-              ) && (
+              {variant.variantPrices.length === 0 && (
                 <p className="text-destructive text-sm mb-2">
-                  Price for pincode 110040 is required.
+                  At least one price per location group is required.
                 </p>
               )}
               {variant.variantPrices.map((price, priceIndex) => (
@@ -318,40 +318,38 @@ export default function VariantForm({
                 >
                   <div className="flex-1">
                     <label className="block text-sm font-medium mb-1">
-                      Location
+                      Location Group
                     </label>
                     <Select
                       disabled={loading}
                       onValueChange={(val) => {
                         if (
-                          requiredLocation &&
                           variant.variantPrices.some(
                             (p, i) =>
-                              i !== priceIndex &&
-                              p.locationId === requiredLocation.id
-                          ) &&
-                          val === requiredLocation.id
+                              i !== priceIndex && p.locationGroupId === val
+                          )
                         ) {
                           toast.error(
-                            "Price for pincode 110040 already exists in this variant."
+                            `Price for '${
+                              locationGroups.find((lg) => lg.id === val)?.name
+                            }' already exists in this variant.`
                           );
                           return;
                         }
                         updatePrice(variantIndex, priceIndex, {
                           ...price,
-                          locationId: val,
+                          locationGroupId: val,
                         });
                       }}
-                      value={price.locationId}
+                      value={price.locationGroupId}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a location" />
+                        <SelectValue placeholder="Select a location group" />
                       </SelectTrigger>
                       <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.city}, {location.state},{" "}
-                            {location.country} ({location.pincode})
+                        {locationGroups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -398,11 +396,7 @@ export default function VariantForm({
                     variant="destructive"
                     size="sm"
                     onClick={() => removePrice(variantIndex, priceIndex)}
-                    disabled={
-                      loading ||
-                      (requiredLocation &&
-                        price.locationId === requiredLocation.id)
-                    }
+                    disabled={loading || variant.variantPrices.length <= 1}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -432,7 +426,7 @@ export default function VariantForm({
         type="button"
         variant="outline"
         onClick={addVariant}
-        disabled={loading || !requiredLocation}
+        disabled={loading || locationGroups.length === 0}
       >
         Add Variant
       </Button>

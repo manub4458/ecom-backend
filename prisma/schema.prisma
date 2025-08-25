@@ -82,17 +82,33 @@ model Store {
   orders              Order[]              @relation("StoreToOrder")
   specificationGroups SpecificationGroup[] @relation("StoreToSpecificationGroup")
   specificationFields SpecificationField[] @relation("StoreToSpecificationField")
-  locations           Location[]           @relation("StoreToLocation")
+  locationGroups      LocationGroup[]      @relation("StoreToLocationGroup")
   brands              Brand[]              @relation("StoreToBrand")
   coupons             Coupon[]             @relation("StoreToCoupon")
+  locations           Location[]           @relation("StoreToLocation")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+}
+
+model LocationGroup {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  storeId       String         @db.ObjectId
+  store         Store          @relation("StoreToLocationGroup", fields: [storeId], references: [id], onDelete: Cascade)
+  name          String
+  locations     Location[]     @relation("LocationGroupToLocation")
+  variantPrices VariantPrice[] @relation("LocationGroupToVariantPrice")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([storeId])
 }
 
 model Location {
   id                  String         @id @default(auto()) @map("_id") @db.ObjectId
   storeId             String         @db.ObjectId
   store               Store          @relation("StoreToLocation", fields: [storeId], references: [id], onDelete: Cascade)
+  locationGroupId     String?        @db.ObjectId
+  locationGroup       LocationGroup? @relation("LocationGroupToLocation", fields: [locationGroupId], references: [id], onDelete: Cascade)
   pincode             String         @unique
   city                String
   state               String
@@ -101,26 +117,25 @@ model Location {
   isExpressDelivery   Boolean?       @default(false)
   expressDeliveryText String?
   deliveryDays        Int?           @default(1)
-  variantPrices       VariantPrice[] @relation("LocationToVariantPrice")
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
   @@unique([storeId, pincode, city, state, country])
-  @@index([storeId])
+  @@index([storeId, locationGroupId])
 }
 
 model VariantPrice {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  variantId  String   @db.ObjectId
-  variant    Variant  @relation("VariantToVariantPrice", fields: [variantId], references: [id], onDelete: Cascade)
-  locationId String   @db.ObjectId
-  location   Location @relation("LocationToVariantPrice", fields: [locationId], references: [id], onDelete: Cascade)
-  price      Int      @default(0)
-  mrp        Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  variantId       String        @db.ObjectId
+  variant         Variant       @relation("VariantToVariantPrice", fields: [variantId], references: [id], onDelete: Cascade)
+  locationGroupId String        @db.ObjectId
+  locationGroup   LocationGroup @relation("LocationGroupToVariantPrice", fields: [locationGroupId], references: [id], onDelete: Cascade)
+  price           Int           @default(0)
+  mrp             Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  @@unique([variantId, locationId])
+  @@unique([variantId, locationGroupId])
 }
 
 model SpecificationGroup {

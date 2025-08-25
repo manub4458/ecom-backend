@@ -32,7 +32,7 @@ export const VariantSchema = z
     variantPrices: z
       .array(
         z.object({
-          locationId: z.string().min(1, "Location is required"),
+          locationGroupId: z.string().min(1, "Location group ID is required"),
           price: z.number().min(0, "Price must be non-negative"),
           mrp: z.number().min(0, "MRP must be non-negative"),
         })

@@ -31,7 +31,6 @@ export async function POST(
       brandId,
       about,
       description,
-      // sizeAndFit,
       materialAndCare,
       enabledFeatures,
       expressDelivery,
@@ -154,17 +153,26 @@ export async function POST(
         }
       }
 
-      if (variant.variantPrices && variant.variantPrices.length > 0) {
-        const locationIds = variant.variantPrices.map((vp) => vp.locationId);
-        const locations = await db.location.findMany({
+      if (!variant.variantPrices || variant.variantPrices.length === 0) {
+        return new NextResponse(
+          "Each variant must have at least one price for a location group",
+          { status: 400 }
+        );
+      }
+
+      if (variant.variantPrices.length > 0) {
+        const locationGroupIds = variant.variantPrices.map(
+          (vp) => vp.locationGroupId
+        );
+        const locationGroups = await db.locationGroup.findMany({
           where: {
-            id: { in: locationIds },
+            id: { in: locationGroupIds },
             storeId: params.storeId,
           },
         });
-        if (locations.length !== locationIds.length) {
+        if (locationGroups.length !== locationGroupIds.length) {
           return new NextResponse(
-            "One or more location IDs in variant prices are invalid",
+            "One or more location group IDs in variant prices are invalid",
             { status: 400 }
           );
         }
@@ -178,7 +186,6 @@ export async function POST(
         brandId,
         about,
         description,
-        // sizeAndFit,
         materialAndCare,
         enabledFeatures,
         expressDelivery,
@@ -209,7 +216,7 @@ export async function POST(
             },
             variantPrices: {
               create: variant.variantPrices?.map((vp) => ({
-                locationId: vp.locationId,
+                locationGroupId: vp.locationGroupId,
                 price: vp.price,
                 mrp: vp.mrp,
               })),
@@ -230,7 +237,7 @@ export async function POST(
             images: true,
             variantPrices: {
               include: {
-                location: true,
+                locationGroup: true,
               },
             },
           },
@@ -243,7 +250,9 @@ export async function POST(
   } catch (error: any) {
     console.log("[PRODUCTS_POST]", error);
     if (error.code === "P2002") {
-      return new NextResponse("Slug or SKU or already exists", { status: 400 });
+      return new NextResponse("Slug or SKU or HSN already exists", {
+        status: 400,
+      });
     }
     return new NextResponse("Internal server error", { status: 500 });
   }
@@ -254,13 +263,10 @@ export async function GET(
   { params }: { params: { storeId: string } }
 ) {
   const origin = request.headers.get("origin");
-
-  // Determine if the origin is allowed
   const corsOrigin = allowedOrigins.includes(origin ?? "")
     ? origin ?? ""
     : allowedOrigins[0];
 
-  // Set CORS headers
   const headers = {
     "Access-Control-Allow-Origin": corsOrigin || "",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -274,7 +280,10 @@ export async function GET(
 
   try {
     if (!params.storeId) {
-      return new NextResponse("Store ID is required", { status: 400, headers });
+      return new NextResponse("Store ID is required", {
+        status: 400,
+        headers,
+      });
     }
 
     const { searchParams } = new URL(request.url);
@@ -288,10 +297,11 @@ export async function GET(
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
     const price = searchParams.get("price");
-    const locationId = searchParams.get("locationId");
+    const locationGroupId = searchParams.get("locationGroupId");
     const pincode = searchParams.get("pincode");
     const isFeatured = searchParams.get("isFeatured");
     const variantIds = searchParams.get("variantIds")?.split(",");
+    const includeRelated = searchParams.get("includeRelated") === "true";
 
     console.log("Received filters:", {
       slug,
@@ -304,22 +314,24 @@ export async function GET(
       page,
       limit,
       price,
-      locationId,
+      locationGroupId,
       pincode,
       isFeatured,
       variantIds,
+      includeRelated,
     });
 
-    let resolvedLocationId = locationId;
-    if (pincode && !locationId) {
+    let resolvedLocationGroupId = locationGroupId;
+    if (pincode && !locationGroupId) {
       const location = await db.location.findUnique({
         where: { pincode, storeId: params.storeId },
+        select: { locationGroupId: true },
       });
       if (!location) {
         console.log("Invalid pincode", pincode);
         return new NextResponse("Invalid pincode", { status: 404, headers });
       }
-      resolvedLocationId = location.id;
+      resolvedLocationGroupId = location.locationGroupId;
     }
 
     // Validate subCategoryId if provided
@@ -334,7 +346,6 @@ export async function GET(
           headers,
         });
       }
-      // Ensure subCategory belongs to categoryId if both are provided
       if (categoryId && subCategory.categoryId !== categoryId) {
         console.log("Subcategory does not belong to specified category", {
           subCategoryId,
@@ -368,11 +379,11 @@ export async function GET(
               color: true,
               images: true,
               variantPrices: {
-                where: resolvedLocationId
-                  ? { locationId: resolvedLocationId }
+                where: resolvedLocationGroupId
+                  ? { locationGroupId: resolvedLocationGroupId }
                   : undefined,
                 include: {
-                  location: true,
+                  locationGroup: true,
                 },
               },
             },
@@ -461,7 +472,7 @@ export async function GET(
       };
     }
 
-    if (price && resolvedLocationId) {
+    if (price && resolvedLocationGroupId) {
       let minPrice: number | undefined;
       let maxPrice: number | undefined;
 
@@ -481,7 +492,7 @@ export async function GET(
             ...(where.variants?.some || {}),
             variantPrices: {
               some: {
-                locationId: resolvedLocationId,
+                locationGroupId: resolvedLocationGroupId,
                 price: {
                   ...(minPrice && { gte: minPrice }),
                   ...(maxPrice && { lte: maxPrice }),
@@ -495,7 +506,6 @@ export async function GET(
 
     const skip = (page - 1) * limit;
 
-    // Fetch paginated products
     const products = await db.product.findMany({
       where,
       include: {
@@ -512,11 +522,11 @@ export async function GET(
             color: true,
             images: true,
             variantPrices: {
-              where: resolvedLocationId
-                ? { locationId: resolvedLocationId }
+              where: resolvedLocationGroupId
+                ? { locationGroupId: resolvedLocationGroupId }
                 : undefined,
               include: {
-                location: true,
+                locationGroup: true,
               },
             },
           },
@@ -543,7 +553,6 @@ export async function GET(
       take: limit,
     });
 
-    // Fetch total count for pagination
     const totalCount = await db.product.count({ where });
 
     const productsWithRatings = products.map((product) => {
