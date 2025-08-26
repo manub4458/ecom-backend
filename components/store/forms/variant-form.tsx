@@ -24,6 +24,7 @@ interface VariantFormProps {
     media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
     sku?: string;
     hsn?: string;
+    tax?: number;
     gstIn?: string;
     variantPrices: Array<{
       locationGroupId: string;
@@ -40,6 +41,7 @@ interface VariantFormProps {
       media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
       sku?: string;
       hsn?: string;
+      tax?: number;
       gstIn?: string;
       variantPrices: Array<{
         locationGroupId: string;
@@ -125,6 +127,7 @@ export default function VariantForm({
         media: [],
         sku: "",
         hsn: "",
+        tax: 0,
         gstIn: "",
         sizeId: null,
         colorId: null,
@@ -291,6 +294,17 @@ export default function VariantForm({
                 }
                 placeholder="Enter GSTIN Number"
                 disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Tax</label>
+              <NumberInput
+                value={variant.tax ? variant.tax : 0}
+                onChange={(num) => updateVariant(variantIndex, { tax: num })}
+                placeholder="Enter Tax"
+                disabled={loading}
+                min={0}
+                step={1}
               />
             </div>
             <div className="mt-4 md:col-span-2">

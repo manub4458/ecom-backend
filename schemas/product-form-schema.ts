@@ -25,6 +25,7 @@ export const VariantSchema = z
       .min(1, "At least one media item is required"),
     sku: z.string().optional(),
     hsn: z.string().optional(),
+    tax: z.number().optional(),
     gstIn: z
       .string()
       .optional()

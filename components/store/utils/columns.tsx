@@ -102,6 +102,9 @@ export type LocationGroupColumn = {
   id: string;
   name: string;
   locationCount: number;
+  isCodAvailable: boolean;
+  deliveryDays: number;
+  isExpressDelivery: boolean;
   createdAt: string;
 };
 
@@ -113,6 +116,20 @@ export const locationGroupColumns: ColumnDef<LocationGroupColumn>[] = [
   {
     accessorKey: "locationCount",
     header: "Locations",
+  },
+  {
+    accessorKey: "deliveryDays",
+    header: "Delivery Days",
+  },
+  {
+    accessorKey: "isCodAvailable",
+    header: "COD Available",
+    cell: ({ row }) => (row.original.isCodAvailable ? "Yes" : "No"),
+  },
+  {
+    accessorKey: "isExpressDelivery",
+    header: "Express Delivery Available",
+    cell: ({ row }) => (row.original.isExpressDelivery ? "Yes" : "No"),
   },
   {
     accessorKey: "createdAt",
@@ -306,9 +323,6 @@ export type LocationColumn = {
   state: string;
   country: string;
   createdAt: string;
-  isCodAvailable: boolean;
-  deliveryDays: number;
-  isExpressDelivery: boolean;
 };
 
 export const locationColumns: ColumnDef<LocationColumn>[] = [
@@ -327,20 +341,6 @@ export const locationColumns: ColumnDef<LocationColumn>[] = [
   {
     accessorKey: "country",
     header: "Country",
-  },
-  {
-    accessorKey: "deliveryDays",
-    header: "Delivery Days",
-  },
-  {
-    accessorKey: "isCodAvailable",
-    header: "COD Available",
-    cell: ({ row }) => (row.original.isCodAvailable ? "Yes" : "No"),
-  },
-  {
-    accessorKey: "isExpressDelivery",
-    header: "Express Delivery Available",
-    cell: ({ row }) => (row.original.isExpressDelivery ? "Yes" : "No"),
   },
   {
     accessorKey: "createdAt",

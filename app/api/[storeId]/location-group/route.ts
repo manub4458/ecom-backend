@@ -13,7 +13,14 @@ export async function POST(
   { params }: { params: { storeId: string } }
 ) {
   try {
-    const { name, locationIds } = await request.json();
+    const {
+      name,
+      locationIds,
+      isCodAvailable,
+      deliveryDays,
+      isExpressDelivery,
+      expressDeliveryText,
+    } = await request.json();
     const session = await auth();
 
     if (!session || !session.user || !session.user.id) {
@@ -22,6 +29,15 @@ export async function POST(
 
     if (!name) {
       return new NextResponse("Name is required", { status: 400 });
+    }
+
+    if (isCodAvailable === undefined || isCodAvailable === null) {
+      return new NextResponse("Cash on Delivery availability is required", {
+        status: 400,
+      });
+    }
+    if (!deliveryDays || deliveryDays.length === null) {
+      return new NextResponse("Delivery days are required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -49,7 +65,10 @@ export async function POST(
       });
 
       if (existingLocations.length !== locationIds.length) {
-        return new NextResponse("One or more location IDs are invalid or do not belong to this store", { status: 400 });
+        return new NextResponse(
+          "One or more location IDs are invalid or do not belong to this store",
+          { status: 400 }
+        );
       }
     }
 
@@ -57,11 +76,16 @@ export async function POST(
       data: {
         name,
         storeId: params.storeId,
-        locations: locationIds && locationIds.length > 0
-          ? {
-              connect: locationIds.map((id: string) => ({ id })),
-            }
-          : undefined,
+        isCodAvailable,
+        deliveryDays,
+        isExpressDelivery,
+        expressDeliveryText,
+        locations:
+          locationIds && locationIds.length > 0
+            ? {
+                connect: locationIds.map((id: string) => ({ id })),
+              }
+            : undefined,
       },
       include: {
         locations: true,
@@ -120,4 +144,3 @@ export async function GET(
     return new NextResponse("Internal server error", { status: 500 });
   }
 }
-

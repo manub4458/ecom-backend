@@ -205,6 +205,7 @@ export async function POST(
             stock: variant.stock,
             sku: variant.sku || undefined,
             hsn: variant.hsn || undefined,
+            tax: variant.tax || undefined,
             gstIn: variant.gstIn || undefined,
             sizeId: variant.sizeId === null ? null : variant.sizeId,
             colorId: variant.colorId === null ? null : variant.colorId,

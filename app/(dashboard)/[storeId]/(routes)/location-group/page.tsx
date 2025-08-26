@@ -42,6 +42,9 @@ const LocationGroupsPage = async ({
       id: item.id,
       name: item.name,
       locationCount: item.locations.length,
+      isCodAvailable: item.isCodAvailable,
+      isExpressDelivery: item.isExpressDelivery ?? false,
+      deliveryDays: item.deliveryDays ?? 0,
       createdAt: format(item.createdAt, "MMMM do, yyyy"),
     })
   );

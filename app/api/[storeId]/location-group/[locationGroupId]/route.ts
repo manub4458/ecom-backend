@@ -13,7 +13,14 @@ export async function PATCH(
   { params }: { params: { storeId: string; locationGroupId: string } }
 ) {
   try {
-    const { name, locationIds } = await request.json();
+    const {
+      name,
+      locationIds,
+      isCodAvailable,
+      deliveryDays,
+      isExpressDelivery,
+      expressDeliveryText,
+    } = await request.json();
     const session = await auth();
 
     if (!session || !session.user || !session.user.id) {
@@ -22,6 +29,16 @@ export async function PATCH(
 
     if (!name) {
       return new NextResponse("Name is required", { status: 400 });
+    }
+
+    if (isCodAvailable === undefined || isCodAvailable === null) {
+      return new NextResponse("Cash on Delivery availability is required", {
+        status: 400,
+      });
+    }
+
+    if (!deliveryDays || deliveryDays.length === null) {
+      return new NextResponse("Delivery days are required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -67,11 +84,15 @@ export async function PATCH(
       },
       data: {
         name,
+        isCodAvailable,
+        deliveryDays,
+        isExpressDelivery,
+        expressDeliveryText,
         locations: locationIds
           ? {
               set: locationIds.map((id: string) => ({ id })),
             }
-          : { set: [] }, // Clear locations if none provided
+          : { set: [] },
       },
       include: {
         locations: true,

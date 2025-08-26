@@ -91,34 +91,34 @@ model Store {
 }
 
 model LocationGroup {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
-  storeId       String         @db.ObjectId
-  store         Store          @relation("StoreToLocationGroup", fields: [storeId], references: [id], onDelete: Cascade)
-  name          String
-  locations     Location[]     @relation("LocationGroupToLocation")
-  variantPrices VariantPrice[] @relation("LocationGroupToVariantPrice")
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                  String         @id @default(auto()) @map("_id") @db.ObjectId
+  storeId             String         @db.ObjectId
+  store               Store          @relation("StoreToLocationGroup", fields: [storeId], references: [id], onDelete: Cascade)
+  name                String
+  isCodAvailable      Boolean        @default(false)
+  isExpressDelivery   Boolean?       @default(false)
+  deliveryDays        Int?           @default(1)
+  expressDeliveryText String?
+  locations           Location[]     @relation("LocationGroupToLocation")
+  variantPrices       VariantPrice[] @relation("LocationGroupToVariantPrice")
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   @@index([storeId])
 }
 
 model Location {
-  id                  String         @id @default(auto()) @map("_id") @db.ObjectId
-  storeId             String         @db.ObjectId
-  store               Store          @relation("StoreToLocation", fields: [storeId], references: [id], onDelete: Cascade)
-  locationGroupId     String?        @db.ObjectId
-  locationGroup       LocationGroup? @relation("LocationGroupToLocation", fields: [locationGroupId], references: [id], onDelete: Cascade)
-  pincode             String         @unique
-  city                String
-  state               String
-  country             String
-  isCodAvailable      Boolean        @default(false)
-  isExpressDelivery   Boolean?       @default(false)
-  expressDeliveryText String?
-  deliveryDays        Int?           @default(1)
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  storeId         String         @db.ObjectId
+  store           Store          @relation("StoreToLocation", fields: [storeId], references: [id], onDelete: Cascade)
+  locationGroupId String?        @db.ObjectId
+  locationGroup   LocationGroup? @relation("LocationGroupToLocation", fields: [locationGroupId], references: [id], onDelete: Cascade)
+  pincode         String         @unique
+  city            String
+  state           String
+  country         String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   @@unique([storeId, pincode, city, state, country])
   @@index([storeId, locationGroupId])
@@ -398,6 +398,7 @@ model Variant {
   images        VariantImage[]
   sku           String?        @unique
   hsn           String?        @unique
+  tax           Float?         @default(0)
   gstIn         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt

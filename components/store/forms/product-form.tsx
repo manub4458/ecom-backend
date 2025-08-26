@@ -165,6 +165,7 @@ export const ProductForm = ({
               colorId: undefined,
               sku: "",
               hsn: "",
+              tax: 0,
               gstIn: "",
               variantPrices:
                 locationGroups.length > 0

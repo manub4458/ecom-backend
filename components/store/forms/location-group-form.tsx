@@ -37,6 +37,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface LocationGroupFormProps {
@@ -69,10 +70,18 @@ export const LocationGroupForm = ({
       ? {
           name: data.name,
           locationIds: data.locations.map((loc) => loc.id),
+          isCodAvailable: data.isCodAvailable,
+          deliveryDays: data.deliveryDays ?? 1,
+          isExpressDelivery: data.isExpressDelivery ?? false,
+          expressDeliveryText: data.expressDeliveryText ?? "",
         }
       : {
           name: "",
           locationIds: [],
+          isCodAvailable: false,
+          isExpressDelivery: false,
+          deliveryDays: 1,
+          expressDeliveryText: "",
         },
   });
 
@@ -221,6 +230,87 @@ export const LocationGroupForm = ({
                         </Command>
                       </PopoverContent>
                     </Popover>
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="deliveryDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Days</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      disabled={loading}
+                      placeholder="Enter delivery days"
+                      min="1"
+                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isCodAvailable"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={loading}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Cash on Delivery</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Enable Cash on Delivery for this location
+                    </p>
+                  </div>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="isExpressDelivery"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={loading}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Express Delivery</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Enable Express Delivery on this location
+                    </p>
+                  </div>
+                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="expressDeliveryText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Express Delivery Text</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={loading}
+                      placeholder="Express Delivery Test"
+                    />
                   </FormControl>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>

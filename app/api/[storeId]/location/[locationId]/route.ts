@@ -18,11 +18,7 @@ export async function PATCH(
       pincode,
       city,
       state,
-      country,
-      isCodAvailable,
-      deliveryDays,
-      isExpressDelivery,
-      expressDeliveryText,
+      country
     } = await request.json();
 
     if (!session || !session.user || !session.user.id) {
@@ -43,16 +39,6 @@ export async function PATCH(
 
     if (!country) {
       return new NextResponse("Country is required", { status: 400 });
-    }
-
-    if (isCodAvailable === undefined || isCodAvailable === null) {
-      return new NextResponse("Cash on Delivery availability is required", {
-        status: 400,
-      });
-    }
-
-    if (!deliveryDays || deliveryDays.length === null) {
-      return new NextResponse("Delivery days are required", { status: 400 });
     }
 
     if (!params.storeId) {
@@ -81,11 +67,7 @@ export async function PATCH(
         pincode,
         city,
         state,
-        country,
-        isCodAvailable,
-        deliveryDays,
-        isExpressDelivery,
-        expressDeliveryText,
+        country
       },
     });
 
