@@ -111,13 +111,17 @@ export async function POST(
       }
     }
 
-    let estimatedDeliveryDays = 3; // Fallback
+    let estimatedDeliveryDays = 3;
     if (zipCode) {
       const location = await db.location.findFirst({
         where: { pincode: zipCode, storeId: params.storeId },
+        include: {
+          locationGroup: true,
+        },
       });
-      if (location && location.deliveryDays) {
-        estimatedDeliveryDays = location.deliveryDays;
+
+      if (location?.locationGroup?.deliveryDays) {
+        estimatedDeliveryDays = location.locationGroup.deliveryDays;
       }
     }
 
