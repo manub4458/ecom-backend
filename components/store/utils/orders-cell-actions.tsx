@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { Edit, MoreHorizontal } from "lucide-react";
 import { OrderColumn } from "./columns";
 import { toast } from "sonner";
 
@@ -72,6 +72,12 @@ export const OrderCellActions = ({ data }: OrderCellActionsProps) => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() => router.push(`/${params.storeId}/orders/${data.id}`)}
+        >
+          {/* <Edit className="h-4 w-4 mr-4" /> */}
+          Invoice
+        </DropdownMenuItem>
         {statusOptions.map((status) => (
           <DropdownMenuItem
             key={status}
