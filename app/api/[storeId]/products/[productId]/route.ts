@@ -422,7 +422,11 @@ export async function GET(
                 ? { locationGroupId: resolvedLocationGroupId }
                 : undefined,
               include: {
-                locationGroup: true,
+                locationGroup: {
+                  include: {
+                    locations: true,
+                  },
+                },
               },
             },
           },
