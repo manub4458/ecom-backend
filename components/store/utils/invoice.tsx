@@ -5,7 +5,7 @@ import React, { useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-interface InvoiceItem {
+export interface InvoiceItem {
   description: string;
   hsn: string;
   sku: string;
@@ -17,7 +17,7 @@ interface InvoiceItem {
   total: number;
 }
 
-interface InvoiceData {
+export interface InvoiceData {
   soldBy: {
     company: string;
     address: string;
