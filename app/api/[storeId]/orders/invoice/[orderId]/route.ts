@@ -44,10 +44,33 @@ interface InvoiceData {
   netTotal: number;
 }
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 export async function GET(
   request: Request,
   { params }: { params: { orderId: string } }
 ) {
+  const origin = request.headers.get("origin");
+
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  const headers = {
+    "Access-Control-Allow-Origin": corsOrigin || "",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
+
   try {
     const order = await db.order.findUnique({
       where: { id: params.orderId },
@@ -66,7 +89,10 @@ export async function GET(
     });
 
     if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Order not found" },
+        { status: 404, headers }
+      );
     }
 
     const invoiceData: InvoiceData = {
@@ -132,12 +158,12 @@ export async function GET(
       }, 0),
     };
 
-    return NextResponse.json(invoiceData, { status: 200 });
+    return NextResponse.json(invoiceData, { status: 200, headers });
   } catch (error) {
     console.error("Invoice API Error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }
