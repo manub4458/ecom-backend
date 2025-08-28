@@ -195,3 +195,36 @@ function convertHundreds(num: number): string {
   }
   return "";
 }
+
+export function wrapNumber(input: string, width: number): string {
+  const words = input.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    // If adding the word exceeds the width, push current line and start a new one
+    if ((currentLine + word).length > width) {
+      if (currentLine) {
+        lines.push(currentLine.trim());
+        currentLine = "";
+      }
+
+      // If word itself is longer than width, break it into chunks
+      if (word.length > width) {
+        for (let i = 0; i < word.length; i += width) {
+          lines.push(word.substring(i, i + width));
+        }
+      } else {
+        currentLine = word + " ";
+      }
+    } else {
+      currentLine += word + " ";
+    }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine.trim());
+  }
+
+  return lines.join("\n");
+}
