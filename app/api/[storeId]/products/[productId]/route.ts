@@ -296,11 +296,16 @@ export async function PATCH(
   } catch (error: any) {
     console.log("[PRODUCT_PATCH]", error);
     if (error.code === "P2002") {
-      return new NextResponse("Slug or SKU or HSN already exists", {
-        status: 400,
-      });
+      return NextResponse.json(
+        { error: "Slug or SKU or HSN already exists" },
+        { status: 400 }
+      );
     }
-    return new NextResponse("Internal server error", { status: 500 });
+
+    return NextResponse.json(
+      { error: error.message || "Unexpected error occurred" },
+      { status: 500 }
+    );
   }
 }
 

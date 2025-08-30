@@ -251,11 +251,16 @@ export async function POST(
   } catch (error: any) {
     console.log("[PRODUCTS_POST]", error);
     if (error.code === "P2002") {
-      return new NextResponse("Slug or SKU or HSN already exists", {
-        status: 400,
-      });
+      return NextResponse.json(
+        { error: "Slug or SKU or HSN already exists" },
+        { status: 400 }
+      );
     }
-    return new NextResponse("Internal server error", { status: 500 });
+
+    return NextResponse.json(
+      { error: error.message || "Unexpected error occurred" },
+      { status: 500 }
+    );
   }
 }
 
@@ -386,7 +391,7 @@ export async function GET(
                 include: {
                   locationGroup: {
                     include: {
-                      locations: true, 
+                      locations: true,
                     },
                   },
                 },
