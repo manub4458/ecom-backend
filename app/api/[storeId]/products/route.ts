@@ -311,6 +311,8 @@ export async function GET(
     const isFeatured = searchParams.get("isFeatured");
     const variantIds = searchParams.get("variantIds")?.split(",");
     const includeRelated = searchParams.get("includeRelated") === "true";
+    const rating = searchParams.get("rating");
+    const discount = searchParams.get("discount");
 
     console.log("Received filters:", {
       slug,
@@ -328,6 +330,8 @@ export async function GET(
       isFeatured,
       variantIds,
       includeRelated,
+      rating,
+      discount,
     });
 
     let resolvedLocationGroupId = locationGroupId;
@@ -460,7 +464,7 @@ export async function GET(
           color: v.color?.name || null,
           size: v.size?.value || null,
           sizeId: v.size?.id,
-          colorId: v.color?.id
+          colorId: v.color?.id,
         })),
       };
 
@@ -513,7 +517,7 @@ export async function GET(
       };
     }
 
-    if (price && resolvedLocationGroupId) {
+    if (price) {
       let minPrice: number | undefined;
       let maxPrice: number | undefined;
 
@@ -533,7 +537,9 @@ export async function GET(
             ...(where.variants?.some || {}),
             variantPrices: {
               some: {
-                locationGroupId: resolvedLocationGroupId,
+                ...(resolvedLocationGroupId
+                  ? { locationGroupId: resolvedLocationGroupId }
+                  : {}),
                 price: {
                   ...(minPrice && { gte: minPrice }),
                   ...(maxPrice && { lte: maxPrice }),
@@ -545,7 +551,9 @@ export async function GET(
       }
     }
 
-    const skip = (page - 1) * limit;
+    const hasPostFilter = !!rating || !!discount;
+    const take = hasPostFilter ? undefined : limit;
+    const skip = hasPostFilter ? 0 : (page - 1) * limit;
 
     const products = await db.product.findMany({
       where,
@@ -594,12 +602,10 @@ export async function GET(
         createdAt: "desc",
       },
       skip,
-      take: limit,
+      take,
     });
 
-    const totalCount = await db.product.count({ where });
-
-    const productsWithRatings = products.map((product) => {
+    let productsWithRatings = products.map((product) => {
       const ratings = product.reviews.map((review) => review.rating);
       const numberOfRatings = ratings.length;
       const averageRating =
@@ -615,13 +621,44 @@ export async function GET(
       };
     });
 
+    let filtered = productsWithRatings;
+    if (rating) {
+      const minRating = parseFloat(rating);
+      filtered = filtered.filter((p) => p.averageRating >= minRating);
+    }
+    if (discount) {
+      const minDiscount = parseFloat(discount);
+      filtered = filtered.filter((p) =>
+        p.variants.some((v) =>
+          v.variantPrices.some((vp) => {
+            if (
+              resolvedLocationGroupId &&
+              vp.locationGroupId !== resolvedLocationGroupId
+            )
+              return false;
+            if (vp.price >= vp.mrp) return false;
+            const d = ((vp.mrp - vp.price) / vp.mrp) * 100;
+            return d >= minDiscount;
+          })
+        )
+      );
+    }
+
+    const totalCount = hasPostFilter
+      ? filtered.length
+      : await db.product.count({ where });
+
+    const finalProducts = hasPostFilter
+      ? filtered.slice((page - 1) * limit, (page - 1) * limit + limit)
+      : filtered;
+
     console.log(
       `Found ${products.length} products for storeId: ${params.storeId}, brandId: ${brandId}, categoryId: ${categoryId}, subCategoryId: ${subCategoryId}`
     );
 
     return NextResponse.json(
       {
-        products: productsWithRatings,
+        products: finalProducts,
         totalCount,
       },
       { headers }
