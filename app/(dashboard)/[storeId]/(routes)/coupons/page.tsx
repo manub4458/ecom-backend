@@ -17,7 +17,13 @@ const CouponsPage = async ({ params }: { params: { storeId: string } }) => {
     include: {
       products: {
         include: {
-          product: true,
+          product: {
+            include: {
+              variants: {
+                take: 1,
+              },
+            },
+          },
         },
       },
     },
@@ -34,7 +40,9 @@ const CouponsPage = async ({ params }: { params: { storeId: string } }) => {
     startDate: format(new Date(item.startDate), "MMMM do, yyyy"),
     expiryDate: format(new Date(item.expiryDate), "MMMM do, yyyy"),
     productCount: item.products.length,
-    productNames: item.products.map((cp) => cp.product.name),
+    productNames: item.products.map(
+      (cp) => cp.product.variants[0]?.name || "Unnamed Product"
+    ),
     usagePerUser: item.usagePerUser,
     usedCount: item.usedCount,
     description: item.description || "",

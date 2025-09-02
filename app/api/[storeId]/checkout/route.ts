@@ -79,7 +79,7 @@ export async function POST(
       return {
         quantity: product.quantity,
         amount: product.price * 100, // Convert price to paise
-        name: `${variant?.product.name} (${variant?.size?.value || ""}, ${
+        name: `${variant?.name} (${variant?.size?.value || ""}, ${
           variant?.color?.name || ""
         })`,
       };

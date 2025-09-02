@@ -17,22 +17,39 @@ const CouponPage = async ({
       include: {
         products: {
           include: {
-            product: true,
+            product: {
+              include: {
+                variants: {
+                  take: 1,
+                },
+              },
+            },
           },
         },
       },
     });
   }
 
-  const products = await db.product.findMany({
-    where: {
-      storeId: params.storeId,
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+  const products = await db.product
+    .findMany({
+      where: {
+        storeId: params.storeId,
+      },
+      include: {
+        variants: {
+          take: 1,
+          select: {
+            name: true,
+          },
+        },
+      },
+    })
+    .then((products) =>
+      products.map((product) => ({
+        id: product.id,
+        name: product.variants[0]?.name || "Unnamed Product",
+      }))
+    );
 
   return (
     <div className="flex flex-col">

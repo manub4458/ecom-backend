@@ -140,8 +140,7 @@ export async function GET(
         const igst = item.price * igstRate;
         const total = taxableValue + igst;
         return {
-          description:
-            item.name || item.variant.product.name || "Unknown Product",
+          description: item.name || item.variant.name || "Unknown Product",
           hsn: item.variant.hsn || "N/A",
           sku: item.variant.sku || "N/A",
           qty: item.quantity,

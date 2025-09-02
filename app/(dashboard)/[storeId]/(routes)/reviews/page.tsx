@@ -17,10 +17,13 @@ const ReviewsPage = async ({ params }: { params: { storeId: string } }) => {
     },
     include: {
       product: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
+        include: {
+          variants: {
+            take: 1, // Get the first variant to use its name
+            select: {
+              name: true,
+            },
+          },
         },
       },
       images: true,
@@ -33,11 +36,11 @@ const ReviewsPage = async ({ params }: { params: { storeId: string } }) => {
   const formattedReviews: ReviewColumn[] = reviews.map((item) => ({
     id: item.id,
     productId: item.productId,
-    productName: item.product.name,
+    productName: item.product.variants[0]?.name || "Unnamed Product", // Use variant name or fallback
     userName: item.userName,
     rating: item.rating,
     text: item.text,
-    imageCount: item.images.length, // Map images to imageCount
+    imageCount: item.images.length,
     createdAt: format(item.createdAt, "MMMM do, yyyy"),
   }));
 
