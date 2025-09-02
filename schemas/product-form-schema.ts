@@ -14,7 +14,6 @@ export const VariantSchema = z
       .optional()
       .transform((val) => (val === "" ? null : val)),
     stock: z.number().min(0, "Stock must be non-negative"),
-    // images: z.array(z.string().url()).min(1, "At least one image is required"),
     media: z
       .array(
         z.object({
@@ -39,6 +38,37 @@ export const VariantSchema = z
         })
       )
       .min(1, "At least one price per location is required"),
+    name: z.string().min(1, "Variant name is required"),
+    slug: z
+      .string()
+      .min(1, "Slug is required")
+      .max(60, "Slug must be at most 60 characters")
+      .regex(
+        /^[a-z0-9-]+$/,
+        "Slug must contain only lowercase letters, numbers, and hyphens"
+      ),
+    about: z.string().optional(),
+    description: z.string().min(1, "Description is required"),
+    metaTitle: z
+      .string()
+      .max(60, "Meta title must be at most 60 characters")
+      .optional(),
+    metaDescription: z
+      .string()
+      .max(160, "Meta description must be at most 160 characters")
+      .optional(),
+    metaKeywords: z.array(z.string()).optional(),
+    openGraphImage: z.string().optional(),
+    specifications: z
+      .array(
+        z.object({
+          specificationFieldId: z
+            .string()
+            .min(1, "Specification field is required"),
+          value: z.string().min(1, "Value is required"),
+        })
+      )
+      .optional(),
   })
   .refine(
     (data) => {
@@ -52,19 +82,8 @@ export const VariantSchema = z
   );
 
 export const ProductSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  slug: z
-    .string()
-    .min(1, "Slug is required")
-    .max(60, "Slug must be at most 60 characters")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug must contain only lowercase letters, numbers, and hyphens"
-    ),
   brandId: z.string().nullable().optional(),
-  about: z.string().optional(),
-  description: z.string().min(1, "Description is required"),
-  // sizeAndFit: z.array(z.string()).optional(),
+  sizeAndFit: z.array(z.string()).optional(),
   materialAndCare: z.array(z.string()).optional(),
   enabledFeatures: z.array(z.string()).optional(),
   expressDelivery: z.boolean().default(false),
@@ -75,24 +94,4 @@ export const ProductSchema = z.object({
   categoryId: z.string().min(1, "Category is required"),
   subCategoryId: z.string().optional(),
   variants: z.array(VariantSchema).min(1, "At least one variant is required"),
-  specifications: z
-    .array(
-      z.object({
-        specificationFieldId: z
-          .string()
-          .min(1, "Specification field is required"),
-        value: z.string().min(1, "Value is required"),
-      })
-    )
-    .optional(),
-  metaTitle: z
-    .string()
-    .max(60, "Meta title must be at most 60 characters")
-    .optional(),
-  metaDescription: z
-    .string()
-    .max(160, "Meta description must be at most 160 characters")
-    .optional(),
-  metaKeywords: z.array(z.string()).optional(),
-  openGraphImage: z.string().optional(),
 });

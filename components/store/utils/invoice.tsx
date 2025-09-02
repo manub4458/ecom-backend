@@ -4,6 +4,7 @@ import { myNumberToWords, wrapNumber } from "@/lib/utils";
 import { useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { Download} from "lucide-react";
 
 export interface InvoiceItem {
   description: string;
@@ -88,8 +89,9 @@ const Invoice = (props: Props) => {
       <div className="flex justify-end px-12 pt-8 items-center">
         <button
           onClick={handleDownloadPDF}
-          className="mb-4 px-4 py-2 bg-black text-white rounded"
+          className="mb-4 px-4 py-2 bg-black text-white rounded-xl flex gap-1 items-center"
         >
+          <Download className="mr-2 h-4 w-4" />
           Save as PDF
         </button>
       </div>
@@ -173,7 +175,7 @@ const Invoice = (props: Props) => {
                   State Code : {invoiceData.deliveredTo.stateCode}
                 </p>
                 <br />
-                <p className="text-base">
+                {/* <p className="text-base">
                   Payment Method : {invoiceData.deliveredTo.paymentMethod}
                 </p>
                 <p className="text-base">
@@ -184,7 +186,7 @@ const Invoice = (props: Props) => {
                 </p>
                 <p className="text-base">
                   eWaybill No. : {invoiceData.deliveredTo.waybillNo}
-                </p>
+                </p> */}
               </div>
             </div>
           </div>

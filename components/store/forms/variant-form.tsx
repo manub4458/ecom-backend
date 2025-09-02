@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Size, Color, LocationGroup } from "@prisma/client";
+import { Size, Color, LocationGroup, SpecificationField } from "@prisma/client";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { MediaUpload } from "@/components/store/utils/media-upload";
+import { ProductFeatures } from "@/components/store/utils/product-features";
+import { SpecificationInput } from "@/components/store/utils/specification-input";
+import Editor from "./editor";
 
 interface VariantFormProps {
   value: Array<{
@@ -30,6 +33,18 @@ interface VariantFormProps {
       locationGroupId: string;
       price: number;
       mrp: number;
+    }>;
+    name: string;
+    slug: string;
+    about?: string;
+    description: string;
+    metaTitle?: string;
+    metaDescription?: string;
+    metaKeywords?: string[];
+    openGraphImage?: string;
+    specifications?: Array<{
+      specificationFieldId: string;
+      value: string;
     }>;
   }>;
   onChange: (
@@ -48,11 +63,24 @@ interface VariantFormProps {
         price: number;
         mrp: number;
       }>;
+      name: string;
+      slug: string;
+      about?: string;
+      description: string;
+      metaTitle?: string;
+      metaDescription?: string;
+      metaKeywords?: string[];
+      openGraphImage?: string;
+      specifications?: Array<{
+        specificationFieldId: string;
+        value: string;
+      }>;
     }>
   ) => void;
   sizes: Size[];
   colors: Color[];
   locationGroups: LocationGroup[];
+  specificationFields: (SpecificationField & { group: { name: string } })[];
 }
 
 interface NumberInputProps {
@@ -103,6 +131,7 @@ export default function VariantForm({
   sizes,
   colors,
   locationGroups,
+  specificationFields,
 }: VariantFormProps) {
   const [loading, setLoading] = useState(false);
 
@@ -123,6 +152,14 @@ export default function VariantForm({
     onChange([
       ...value,
       {
+        name: "",
+        slug: "",
+        about: "",
+        description: "",
+        metaTitle: "",
+        metaDescription: "",
+        metaKeywords: [],
+        openGraphImage: "",
         stock: 0,
         media: [],
         sku: "",
@@ -131,6 +168,7 @@ export default function VariantForm({
         gstIn: "",
         sizeId: null,
         colorId: null,
+        specifications: [],
         variantPrices: [
           {
             locationGroupId: locationGroups[0].id,
@@ -207,6 +245,128 @@ export default function VariantForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <label className="block text-sm font-medium mb-1">Name</label>
+              <Input
+                value={variant.name || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, { name: e.target.value })
+                }
+                placeholder="Variant name"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Slug</label>
+              <Input
+                value={variant.slug || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, { slug: e.target.value })
+                }
+                placeholder="Variant slug"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">About</label>
+              <Input
+                value={variant.about || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, { about: e.target.value })
+                }
+                placeholder="About variant"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Description
+              </label>
+              <Editor
+                value={variant.description || ""}
+                onChange={(value) =>
+                  updateVariant(variantIndex, { description: value })
+                }
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Meta Title
+              </label>
+              <Input
+                value={variant.metaTitle || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, { metaTitle: e.target.value })
+                }
+                placeholder="SEO meta title (max 60 characters)"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Meta Description
+              </label>
+              <Input
+                value={variant.metaDescription || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, {
+                    metaDescription: e.target.value,
+                  })
+                }
+                placeholder="SEO meta description (max 160 characters)"
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Open Graph Image URL
+              </label>
+              <Input
+                value={variant.openGraphImage || ""}
+                onChange={(e) =>
+                  updateVariant(variantIndex, {
+                    openGraphImage: e.target.value,
+                  })
+                }
+                placeholder="URL for Open Graph image"
+                disabled={loading}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">
+                Meta Keywords
+              </label>
+              <ProductFeatures
+                value={variant.metaKeywords || []}
+                disabled={loading}
+                onChange={(value) =>
+                  updateVariant(variantIndex, {
+                    metaKeywords: [...(variant.metaKeywords || []), value],
+                  })
+                }
+                onRemove={(value) =>
+                  updateVariant(variantIndex, {
+                    metaKeywords: (variant.metaKeywords || []).filter(
+                      (data) => data !== value
+                    ),
+                  })
+                }
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">
+                Specifications
+              </label>
+              <SpecificationInput
+                value={variant.specifications || []}
+                disabled={loading}
+                specificationFields={specificationFields}
+                onChange={(specifications) =>
+                  updateVariant(variantIndex, { specifications })
+                }
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">Size</label>
               <select
                 value={variant.sizeId ?? "none"}
@@ -226,7 +386,6 @@ export default function VariantForm({
                 ))}
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">Color</label>
               <select
@@ -247,7 +406,6 @@ export default function VariantForm({
                 ))}
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">Stock</label>
               <NumberInput
@@ -259,7 +417,6 @@ export default function VariantForm({
                 step={1}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">SKU</label>
               <Input
@@ -271,7 +428,6 @@ export default function VariantForm({
                 disabled={loading}
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">HSN Code</label>
               <Input
@@ -371,24 +527,6 @@ export default function VariantForm({
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-medium mb-1">
-                      Price (INR)
-                    </label>
-                    <NumberInput
-                      value={price.price}
-                      onChange={(num) =>
-                        updatePrice(variantIndex, priceIndex, {
-                          ...price,
-                          price: num,
-                        })
-                      }
-                      placeholder="Enter price"
-                      disabled={loading}
-                      min={0}
-                      step={1}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">
                       MRP (INR)
                     </label>
                     <NumberInput
@@ -405,6 +543,25 @@ export default function VariantForm({
                       step={1}
                     />
                   </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">
+                      Price (INR)
+                    </label>
+                    <NumberInput
+                      value={price.price}
+                      onChange={(num) =>
+                        updatePrice(variantIndex, priceIndex, {
+                          ...price,
+                          price: num,
+                        })
+                      }
+                      placeholder="Enter price"
+                      disabled={loading}
+                      min={0}
+                      step={1}
+                    />
+                  </div>
+
                   <Button
                     type="button"
                     variant="destructive"
@@ -417,7 +574,6 @@ export default function VariantForm({
                 </div>
               ))}
             </div>
-
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">
                 Media (Images/Videos)

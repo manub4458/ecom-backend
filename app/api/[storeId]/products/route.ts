@@ -26,11 +26,8 @@ export async function POST(
     }
 
     const {
-      name,
-      slug,
       brandId,
-      about,
-      description,
+      sizeAndFit,
       materialAndCare,
       enabledFeatures,
       expressDelivery,
@@ -41,11 +38,6 @@ export async function POST(
       categoryId,
       subCategoryId,
       variants,
-      specifications,
-      metaTitle,
-      metaDescription,
-      metaKeywords,
-      openGraphImage,
     } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -95,26 +87,26 @@ export async function POST(
       }
     }
 
-    if (specifications && specifications.length > 0) {
-      const specificationFieldIds = specifications.map(
-        (spec) => spec.specificationFieldId
-      );
-      const specificationFields = await db.specificationField.findMany({
-        where: {
-          id: { in: specificationFieldIds },
-          storeId: params.storeId,
-        },
-      });
-
-      if (specificationFields.length !== specificationFieldIds.length) {
-        return new NextResponse(
-          "One or more specification fields are invalid",
-          { status: 400 }
-        );
-      }
-    }
-
     for (const variant of variants) {
+      if (variant.specifications && variant.specifications.length > 0) {
+        const specificationFieldIds = variant.specifications.map(
+          (spec) => spec.specificationFieldId
+        );
+        const specificationFields = await db.specificationField.findMany({
+          where: {
+            id: { in: specificationFieldIds },
+            storeId: params.storeId,
+          },
+        });
+
+        if (specificationFields.length !== specificationFieldIds.length) {
+          return new NextResponse(
+            "One or more specification fields are invalid",
+            { status: 400 }
+          );
+        }
+      }
+
       if (variant.sizeId !== null && variant.sizeId) {
         const size = await db.size.findUnique({
           where: { id: variant.sizeId },
@@ -129,6 +121,16 @@ export async function POST(
         });
         if (!color) {
           return new NextResponse("Invalid color in variant", { status: 400 });
+        }
+      }
+      if (variant.slug) {
+        const existingVariant = await db.variant.findUnique({
+          where: { slug: variant.slug },
+        });
+        if (existingVariant) {
+          return new NextResponse(`Slug ${variant.slug} already exists`, {
+            status: 400,
+          });
         }
       }
       if (variant.sku) {
@@ -181,11 +183,8 @@ export async function POST(
 
     const product = await db.product.create({
       data: {
-        name,
-        slug,
         brandId,
-        about,
-        description,
+        sizeAndFit,
         materialAndCare,
         enabledFeatures,
         expressDelivery,
@@ -196,12 +195,16 @@ export async function POST(
         categoryId,
         subCategoryId,
         storeId: params.storeId,
-        metaTitle,
-        metaDescription,
-        metaKeywords,
-        openGraphImage,
         variants: {
           create: variants.map((variant) => ({
+            name: variant.name,
+            slug: variant.slug,
+            about: variant.about,
+            description: variant.description,
+            metaTitle: variant.metaTitle,
+            metaDescription: variant.metaDescription,
+            metaKeywords: variant.metaKeywords,
+            openGraphImage: variant.openGraphImage,
             stock: variant.stock,
             sku: variant.sku || undefined,
             hsn: variant.hsn || undefined,
@@ -222,12 +225,12 @@ export async function POST(
                 mrp: vp.mrp,
               })),
             },
-          })),
-        },
-        productSpecifications: {
-          create: specifications?.map((spec) => ({
-            specificationFieldId: spec.specificationFieldId,
-            value: spec.value,
+            variantSpecifications: {
+              create: variant.specifications?.map((spec) => ({
+                specificationFieldId: spec.specificationFieldId,
+                value: spec.value,
+              })),
+            },
           })),
         },
       },
@@ -241,9 +244,9 @@ export async function POST(
                 locationGroup: true,
               },
             },
+            variantSpecifications: true,
           },
         },
-        productSpecifications: true,
       },
     });
 
@@ -365,40 +368,25 @@ export async function GET(
     }
 
     if (slug) {
-      const product = await db.product.findUnique({
-        where: {
-          slug,
-          storeId: params.storeId,
-          isArchieved: false,
-        },
+      const variantData = await db.variant.findUnique({
+        where: { slug },
         include: {
-          brand: true,
-          category: true,
-          subCategory: {
+          size: true,
+          color: true,
+          images: true,
+          variantPrices: {
+            where: resolvedLocationGroupId
+              ? { locationGroupId: resolvedLocationGroupId }
+              : undefined,
             include: {
-              parent: true,
-            },
-          },
-          variants: {
-            include: {
-              size: true,
-              color: true,
-              images: true,
-              variantPrices: {
-                where: resolvedLocationGroupId
-                  ? { locationGroupId: resolvedLocationGroupId }
-                  : undefined,
+              locationGroup: {
                 include: {
-                  locationGroup: {
-                    include: {
-                      locations: true,
-                    },
-                  },
+                  locations: true,
                 },
               },
             },
           },
-          productSpecifications: {
+          variantSpecifications: {
             include: {
               specificationField: {
                 include: {
@@ -407,15 +395,41 @@ export async function GET(
               },
             },
           },
-          reviews: {
-            select: {
-              rating: true,
+          product: {
+            include: {
+              brand: true,
+              category: true,
+              subCategory: {
+                include: {
+                  parent: true,
+                },
+              },
+              variants: {
+                orderBy: {
+                  createdAt: "asc",
+                },
+                include: {
+                  size: true,
+                  color: true,
+                },
+              },
+              reviews: {
+                select: {
+                  rating: true,
+                },
+              },
             },
           },
         },
       });
 
-      if (!product) {
+      if (!variantData || !variantData.product) {
+        return new NextResponse("Product not found", { status: 404, headers });
+      }
+
+      const product = variantData.product;
+
+      if (product.storeId !== params.storeId || product.isArchieved) {
         return new NextResponse("Product not found", { status: 404, headers });
       }
 
@@ -426,14 +440,31 @@ export async function GET(
           ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
           : 0;
 
-      const { reviews, ...productWithoutReviews } = product;
-      const productWithRatings = {
-        ...productWithoutReviews,
-        averageRating: Number(averageRating.toFixed(2)),
-        numberOfRatings,
+      const { reviews, variants, ...productWithoutVariantsAndReviews } =
+        product;
+
+      const response = {
+        variant: {
+          ...variantData,
+          product: undefined, // Remove nested product
+        },
+        product: {
+          ...productWithoutVariantsAndReviews,
+          averageRating: Number(averageRating.toFixed(2)),
+          numberOfRatings,
+        },
+        allVariants: variants.map((v) => ({
+          id: v.id,
+          title: v.name,
+          slug: v.slug,
+          color: v.color?.name || null,
+          size: v.size?.value || null,
+          sizeId: v.size?.id,
+          colorId: v.color?.id
+        })),
       };
 
-      return NextResponse.json(productWithRatings, { headers });
+      return NextResponse.json(response, { headers });
     }
 
     const where: any = {
@@ -527,6 +558,9 @@ export async function GET(
           },
         },
         variants: {
+          orderBy: {
+            createdAt: "asc",
+          },
           include: {
             size: true,
             color: true,
@@ -539,13 +573,13 @@ export async function GET(
                 locationGroup: true,
               },
             },
-          },
-        },
-        productSpecifications: {
-          include: {
-            specificationField: {
+            variantSpecifications: {
               include: {
-                group: true,
+                specificationField: {
+                  include: {
+                    group: true,
+                  },
+                },
               },
             },
           },

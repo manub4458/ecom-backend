@@ -12,18 +12,18 @@ export async function POST(
   request: Request,
   { params }: { params: { productId: string } }
 ) {
-  // Set CORS headers
+  const origin = request.headers.get("origin");
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
   const headers = {
-    "Access-Control-Allow-Origin":
-      process.env.NEXT_PUBLIC_FRONTEND_URL ||
-      "http://localhost:3000" ||
-      "http://localhost:3001" ||
-      "https://favobliss.vercel.app",
+    "Access-Control-Allow-Origin": corsOrigin || "",
     "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "86400",
   };
 
-  // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { status: 204, headers });
   }
@@ -120,8 +120,6 @@ export async function POST(
         product: {
           select: {
             id: true,
-            name: true,
-            slug: true,
           },
         },
       },
@@ -139,13 +137,10 @@ export async function GET(
   { params }: { params: { productId: string } }
 ) {
   const origin = request.headers.get("origin");
-
-  // Determine if the origin is allowed
   const corsOrigin = allowedOrigins.includes(origin ?? "")
     ? origin ?? ""
     : allowedOrigins[0];
 
-  // Set CORS headers
   const headers = {
     "Access-Control-Allow-Origin": corsOrigin || "",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -153,7 +148,6 @@ export async function GET(
     "Access-Control-Max-Age": "86400",
   };
 
-  // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { status: 204, headers });
   }
@@ -161,8 +155,7 @@ export async function GET(
   try {
     if (!params.productId) {
       return new NextResponse("Product ID is required", {
-        status: 400,
-        headers,
+        status: 400, headers,
       });
     }
 
@@ -183,8 +176,6 @@ export async function GET(
         product: {
           select: {
             id: true,
-            name: true,
-            slug: true,
           },
         },
       },
@@ -199,89 +190,3 @@ export async function GET(
     return new NextResponse("Internal server error", { status: 500, headers });
   }
 }
-
-// export async function GET_AVERAGE_RATINGS(
-//   request: Request,
-//   { params }: { params: { productId: string } }
-// ) {
-//   // Set CORS headers
-//   const headers = {
-//     "Access-Control-Allow-Origin":
-//       process.env.NEXT_PUBLIC_FRONTEND_URL ||
-//       "http://localhost:3000" ||
-//       "http://localhost:3001" ||
-//       "https://favobliss.vercel.app",
-//     "Access-Control-Allow-Methods": "GET, OPTIONS",
-//     "Access-Control-Allow-Headers": "Content-Type",
-//   };
-
-//   // Handle preflight OPTIONS request
-//   if (request.method === "OPTIONS") {
-//     return new NextResponse(null, { status: 204, headers });
-//   }
-
-//   try {
-//     if (!params.productId) {
-//       return new NextResponse("Product ID is required", {
-//         status: 400,
-//         headers,
-//       });
-//     }
-
-//     const product = await db.product.findUnique({
-//       where: { id: params.productId },
-//       include: {
-//         subCategory: {
-//           select: {
-//             reviewCategories: true,
-//           },
-//         },
-//       },
-//     });
-
-//     if (!product) {
-//       return new NextResponse("Product does not exist", {
-//         status: 404,
-//         headers,
-//       });
-//     }
-
-//     const reviews = await db.review.findMany({
-//       where: {
-//         productId: params.productId,
-//       },
-//       include: {
-//         categoryRatings: true,
-//       },
-//     });
-
-//     const categoryRatingsMap: { [key: string]: { total: number; count: number } } = {};
-
-//     reviews.forEach((review) => {
-//       review.categoryRatings.forEach((cr) => {
-//         if (!categoryRatingsMap[cr.categoryName]) {
-//           categoryRatingsMap[cr.categoryName] = { total: 0, count: 0 };
-//         }
-//         categoryRatingsMap[cr.categoryName].total += cr.rating;
-//         categoryRatingsMap[cr.categoryName].count += 1;
-//       });
-//     });
-
-//     const averageRatings = Object.keys(categoryRatingsMap).map((categoryName) => ({
-//       categoryName,
-//       averageRating: categoryRatingsMap[categoryName].count
-//         ? Number(
-//             (
-//               categoryRatingsMap[categoryName].total /
-//               categoryRatingsMap[categoryName].count
-//             ).toFixed(2)
-//           )
-//         : 0,
-//     }));
-
-//     return NextResponse.json(averageRatings, { headers });
-//   } catch (error) {
-//     console.log("[AVERAGE_RATINGS_GET]", error);
-//     return new NextResponse("Internal server error", { status: 500, headers });
-//   }
-// }

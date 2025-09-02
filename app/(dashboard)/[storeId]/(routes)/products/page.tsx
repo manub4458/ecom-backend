@@ -30,6 +30,9 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
         },
       },
       variants: {
+        orderBy: {
+          createdAt: "asc",
+        },
         include: {
           size: true,
           color: true,
@@ -39,13 +42,13 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
               locationGroup: true,
             },
           },
-        },
-      },
-      productSpecifications: {
-        include: {
-          specificationField: {
+          variantSpecifications: {
             include: {
-              group: true,
+              specificationField: {
+                include: {
+                  group: true,
+                },
+              },
             },
           },
         },
@@ -83,7 +86,8 @@ const ProductsPage = async ({ params }: { params: { storeId: string } }) => {
 
     return {
       id: product.id,
-      name: product.name,
+      name: firstVariant?.name || "Unnamed Variant",
+      slug: firstVariant?.slug || "",
       isFeatured: product.isFeatured,
       isNewArrival: product.isNewArrival,
       isArchieved: product.isArchieved,

@@ -1,4 +1,3 @@
-// frontend: components/store/utils/order-cell-actions.tsx
 "use client";
 
 import { useState } from "react";
@@ -50,7 +49,6 @@ export const OrderCellActions = ({ data }: OrderCellActionsProps) => {
     "RETURNED",
     "REFUNDED",
   ].filter((status) => {
-    // Only show valid transitions
     const validTransitions: Record<string, string[]> = {
       PENDING: ["PROCESSING", "CANCELLED"],
       PROCESSING: ["SHIPPED", "CANCELLED"],
@@ -75,8 +73,7 @@ export const OrderCellActions = ({ data }: OrderCellActionsProps) => {
         <DropdownMenuItem
           onClick={() => router.push(`/${params.storeId}/orders/${data.id}`)}
         >
-          {/* <Edit className="h-4 w-4 mr-4" /> */}
-          Invoice
+          More Info
         </DropdownMenuItem>
         {statusOptions.map((status) => (
           <DropdownMenuItem

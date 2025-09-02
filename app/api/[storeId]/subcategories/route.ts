@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { SubCategorySchema } from "@/schemas/subcategory-form-schema";
 import { NextResponse } from "next/server";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 async function isValidParent(
   subCategoryId: string | null,
   parentId: string
@@ -110,9 +116,25 @@ export async function GET(
   request: Request,
   { params }: { params: { storeId: string } }
 ) {
+  const origin = request.headers.get("origin");
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
+  const headers = {
+    "Access-Control-Allow-Origin": corsOrigin || "",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
+
+  if (request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers });
+  }
+
   try {
     if (!params.storeId) {
-      return new NextResponse("Store Id is required", { status: 400 });
+      return new NextResponse("Store Id is required", { status: 400, headers });
     }
 
     const { searchParams } = new URL(request.url);
@@ -140,10 +162,13 @@ export async function GET(
       });
 
       if (!subCategory) {
-        return new NextResponse("SubCategory not found", { status: 404 });
+        return new NextResponse("SubCategory not found", {
+          status: 404,
+          headers,
+        });
       }
 
-      return NextResponse.json(subCategory);
+      return NextResponse.json(subCategory, { headers });
     }
 
     const subCategories = await db.subCategory.findMany({
@@ -178,9 +203,9 @@ export async function GET(
         })),
       }));
 
-    return NextResponse.json(transformedSubCategories);
+    return NextResponse.json(transformedSubCategories, { headers });
   } catch (error) {
     console.log("[SUBCATEGORIES_GET]", error);
-    return new NextResponse("Internal server error", { status: 500 });
+    return new NextResponse("Internal server error", { status: 500, headers });
   }
 }

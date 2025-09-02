@@ -24,7 +24,6 @@ export async function GET(
     "Access-Control-Max-Age": "86400",
   };
 
-  // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { status: 204, headers });
   }
@@ -48,10 +47,9 @@ export async function GET(
     let searchResults;
 
     if (!query) {
-      // Fetch suggested data when no query is provided
       const brands = await db.brand.findMany({
         where: { storeId: params.storeId },
-        orderBy: { createdAt: "desc" }, // Or use a metric like popularity
+        orderBy: { createdAt: "desc" },
         take: brandLimit,
       });
 
@@ -96,6 +94,7 @@ export async function GET(
         take: subCategoryLimit,
       });
 
+      // Get products with their variants
       const products = await db.product.findMany({
         where: {
           storeId: params.storeId,
@@ -105,12 +104,18 @@ export async function GET(
           brand: true,
           category: true,
           subCategory: { include: { parent: true } },
-          variants: { include: { size: true, color: true, images: true } },
-          productSpecifications: {
-            include: { specificationField: { include: { group: true } } },
+          variants: { 
+            include: { 
+              size: true, 
+              color: true, 
+              images: true,
+              variantSpecifications: {
+                include: { specificationField: { include: { group: true } } }
+              }
+            } 
           },
         },
-        orderBy: { createdAt: "desc" }, // Or use a metric like sales or views
+        orderBy: { createdAt: "desc" },
         skip,
         take: productLimit,
       });
@@ -128,14 +133,13 @@ export async function GET(
           totalSubCategories: subCategories.length,
           totalProducts: products.length,
         },
-        isSuggested: true, // Flag to indicate these are suggested results
+        isSuggested: true,
       };
 
       console.log(
         `[SEARCH_GET] No query provided, returning suggested data for storeId: ${params.storeId}`
       );
     } else {
-      // Existing search logic for when query is provided
       const brands = await db.brand.findMany({
         where: {
           storeId: params.storeId,
@@ -219,10 +223,17 @@ export async function GET(
         take: subCategoryLimit,
       });
 
-      const productWhere: any = {
-        storeId: params.storeId,
-        isArchieved: false,
-        name: { contains: query, mode: "insensitive" },
+      // Search in variants instead of products
+      const variantsWhere: any = {
+        product: {
+          storeId: params.storeId,
+          isArchieved: false,
+        },
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { description: { contains: query, mode: "insensitive" } },
+          { about: { contains: query, mode: "insensitive" } },
+        ],
       };
 
       if (brandName) {
@@ -235,24 +246,45 @@ export async function GET(
         if (!brand) {
           return new NextResponse("Brand not found", { status: 404, headers });
         }
-        productWhere.brandId = brand.id;
+        variantsWhere.product.brandId = brand.id;
       }
 
-      const products = await db.product.findMany({
-        where: productWhere,
+      // First get variants that match the search criteria
+      const matchingVariants = await db.variant.findMany({
+        where: variantsWhere,
         include: {
-          brand: true,
-          category: true,
-          subCategory: { include: { parent: true } },
-          variants: { include: { size: true, color: true, images: true } },
-          productSpecifications: {
-            include: { specificationField: { include: { group: true } } },
+          product: {
+            include: {
+              brand: true,
+              category: true,
+              subCategory: { include: { parent: true } },
+            }
           },
+          size: true,
+          color: true,
+          images: true,
+          variantSpecifications: {
+            include: { specificationField: { include: { group: true } } }
+          }
         },
         orderBy: { createdAt: "desc" },
         skip,
         take: productLimit,
       });
+
+      // Group variants by product to return complete products
+      const productsMap = new Map();
+      matchingVariants.forEach(variant => {
+        if (!productsMap.has(variant.productId)) {
+          productsMap.set(variant.productId, {
+            ...variant.product,
+            variants: []
+          });
+        }
+        productsMap.get(variant.productId).variants.push(variant);
+      });
+
+      const products = Array.from(productsMap.values());
 
       searchResults = {
         brands,

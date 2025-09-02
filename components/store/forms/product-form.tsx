@@ -14,7 +14,7 @@ import {
   VariantImage,
   LocationGroup,
 } from "@prisma/client";
-import { useForm } from "react-hook-form";
+import { useForm, FieldError } from "react-hook-form";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -41,15 +41,13 @@ import { Header } from "@/components/store/utils/header";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "@/components/ui/input";
-import { useParams, useRouter } from "next/navigation";
-import { AlertModal } from "@/components/modals/alert-modal";
 import { ProductFeatures } from "@/components/store/utils/product-features";
-import { SpecificationInput } from "@/components/store/utils/specification-input";
 import { ProductSchema } from "@/schemas/product-form-schema";
 import { Switch } from "@/components/ui/switch";
-import Editor from "./editor";
 import VariantForm from "./variant-form";
+import { useParams, useRouter } from "next/navigation";
+import { AlertModal } from "@/components/modals/alert-modal";
+import { Input } from "@/components/ui/input";
 
 const getSubCategoryName = (
   subCategory: SubCategory,
@@ -73,11 +71,11 @@ interface ProductFormProps {
             price: number;
             mrp: number;
           }[];
+          variantSpecifications: {
+            specificationFieldId: string;
+            value: string;
+          }[];
         })[];
-        productSpecifications: {
-          specificationFieldId: string;
-          value: string;
-        }[];
       })
     | null;
   brands: Brand[];
@@ -114,12 +112,8 @@ export const ProductForm = ({
     defaultValues: data
       ? {
           ...data,
-          slug: data.slug || "",
           brandId: data.brandId ?? undefined,
-          categoryId: data.categoryId ?? undefined,
-          subCategoryId: data.subCategoryId ?? undefined,
-          about: data.about || "",
-          description: data.description || "",
+          sizeAndFit: data.sizeAndFit || [],
           materialAndCare: data.materialAndCare || [],
           enabledFeatures: data.enabledFeatures || [],
           expressDelivery: data.expressDelivery || false,
@@ -127,26 +121,21 @@ export const ProductForm = ({
           isFeatured: data.isFeatured || false,
           isNewArrival: data.isNewArrival || false,
           isArchieved: data.isArchieved || false,
-          specifications: data.productSpecifications || [],
+          categoryId: data.categoryId ?? undefined,
+          subCategoryId: data.subCategoryId ?? undefined,
           variants: data.variants.map((v: any) => ({
             ...v,
             media: v.images.map((img: any) => ({
               url: img.url,
               mediaType: img.mediaType || "IMAGE",
             })),
+            specifications: v.variantSpecifications || [],
             variantPrices: v.variantPrices || [],
           })),
-          metaTitle: data.metaTitle || "",
-          metaDescription: data.metaDescription || "",
-          metaKeywords: data.metaKeywords || [],
-          openGraphImage: data.openGraphImage || "",
         }
       : {
-          name: "",
-          slug: "",
           brandId: undefined,
-          about: "",
-          description: "",
+          sizeAndFit: [],
           materialAndCare: [],
           enabledFeatures: [],
           expressDelivery: false,
@@ -156,9 +145,16 @@ export const ProductForm = ({
           isArchieved: false,
           categoryId: "",
           subCategoryId: undefined,
-          specifications: [],
           variants: [
             {
+              name: "",
+              slug: "",
+              about: "",
+              description: "",
+              metaTitle: "",
+              metaDescription: "",
+              metaKeywords: [],
+              openGraphImage: "",
               stock: 0,
               media: [],
               sizeId: undefined,
@@ -167,6 +163,7 @@ export const ProductForm = ({
               hsn: "",
               tax: 0,
               gstIn: "",
+              specifications: [],
               variantPrices:
                 locationGroups.length > 0
                   ? [
@@ -179,12 +176,10 @@ export const ProductForm = ({
                   : [],
             },
           ],
-          metaTitle: "",
-          metaDescription: "",
-          metaKeywords: [],
-          openGraphImage: "",
         },
   });
+  // console.log("Form values:", values);
+  console.log("Form errors:", form.formState.errors);
 
   const onSubmit = async (values: z.infer<typeof ProductSchema>) => {
     if (locationGroups.length === 0) {
@@ -229,10 +224,9 @@ export const ProductForm = ({
         error.response?.status === 400 &&
         error.response?.data === "Slug or SKU or HSN already exists"
       ) {
-        form.setError("slug", {
-          type: "manual",
-          message: "Slug already exists. Please choose a different slug.",
-        });
+        toast.error(
+          "Slug, SKU, or HSN already exists. Please choose different values."
+        );
       } else {
         toast.error("Internal server error");
       }
@@ -284,61 +278,6 @@ export const ProductForm = ({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="Product name"
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="about"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>About Product</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="About Product"
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slug</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="Product slug"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs text-muted-foreground">
-                    The slug must be unique, contain only lowercase letters,
-                    numbers, and hyphens, and be at most 60 characters long.
-                  </FormDescription>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="brandId"
@@ -409,23 +348,6 @@ export const ProductForm = ({
             />
             <FormField
               control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Product Description</FormLabel>
-                  <FormControl>
-                    <Editor
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={loading}
-                    />
-                  </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="subCategoryId"
               render={({ field }) => (
                 <FormItem>
@@ -483,66 +405,6 @@ export const ProductForm = ({
                       placeholder="Warranty information (e.g., 1 year)"
                     />
                   </FormControl>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="metaTitle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Meta Title</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="SEO meta title (max 60 characters)"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs text-muted-foreground">
-                    The meta title for SEO, up to 60 characters.
-                  </FormDescription>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="metaDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Meta Description</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="SEO meta description (max 160 characters)"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs text-muted-foreground">
-                    The meta description for SEO, up to 160 characters.
-                  </FormDescription>
-                  <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="openGraphImage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Open Graph Image URL</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={loading}
-                      placeholder="URL for Open Graph image"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs text-muted-foreground">
-                    The URL of the image used for social media sharing.
-                  </FormDescription>
                   <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
                 </FormItem>
               )}
@@ -634,10 +496,10 @@ export const ProductForm = ({
           </div>
           <FormField
             control={form.control}
-            name="metaKeywords"
+            name="sizeAndFit"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Meta Keywords</FormLabel>
+                <FormLabel>Size and Fit</FormLabel>
                 <FormControl>
                   <ProductFeatures
                     value={field.value || []}
@@ -652,9 +514,6 @@ export const ProductForm = ({
                     }
                   />
                 </FormControl>
-                <FormDescription className="text-xs text-muted-foreground">
-                  Keywords for SEO, separated by commas.
-                </FormDescription>
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
               </FormItem>
             )}
@@ -709,24 +568,6 @@ export const ProductForm = ({
           />
           <FormField
             control={form.control}
-            name="specifications"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Specifications</FormLabel>
-                <FormControl>
-                  <SpecificationInput
-                    value={field.value || []}
-                    disabled={loading}
-                    specificationFields={specificationFields}
-                    onChange={field.onChange}
-                  />
-                </FormControl>
-                <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
             name="variants"
             render={({ field }) => (
               <FormItem>
@@ -738,6 +579,7 @@ export const ProductForm = ({
                     sizes={sizes}
                     colors={colors}
                     locationGroups={locationGroups}
+                    specificationFields={specificationFields}
                   />
                 </FormControl>
                 <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />

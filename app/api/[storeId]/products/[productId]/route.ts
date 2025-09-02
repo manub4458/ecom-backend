@@ -26,11 +26,8 @@ export async function PATCH(
     }
 
     const {
-      name,
-      slug,
       brandId,
-      about,
-      description,
+      sizeAndFit,
       materialAndCare,
       enabledFeatures,
       expressDelivery,
@@ -41,11 +38,6 @@ export async function PATCH(
       categoryId,
       subCategoryId,
       variants,
-      specifications,
-      metaTitle,
-      metaDescription,
-      metaKeywords,
-      openGraphImage,
     } = validatedData.data;
 
     if (!session || !session.user || !session.user.id) {
@@ -99,26 +91,26 @@ export async function PATCH(
       }
     }
 
-    if (specifications && specifications.length > 0) {
-      const specificationFieldIds = specifications.map(
-        (spec) => spec.specificationFieldId
-      );
-      const specificationFields = await db.specificationField.findMany({
-        where: {
-          id: { in: specificationFieldIds },
-          storeId: params.storeId,
-        },
-      });
-
-      if (specificationFields.length !== specificationFieldIds.length) {
-        return new NextResponse(
-          "One or more specification fields are invalid",
-          { status: 400 }
-        );
-      }
-    }
-
     for (const variant of variants) {
+      if (variant.specifications && variant.specifications.length > 0) {
+        const specificationFieldIds = variant.specifications.map(
+          (spec) => spec.specificationFieldId
+        );
+        const specificationFields = await db.specificationField.findMany({
+          where: {
+            id: { in: specificationFieldIds },
+            storeId: params.storeId,
+          },
+        });
+
+        if (specificationFields.length !== specificationFieldIds.length) {
+          return new NextResponse(
+            "One or more specification fields are invalid",
+            { status: 400 }
+          );
+        }
+      }
+
       if (variant.sizeId !== null && variant.sizeId) {
         const size = await db.size.findUnique({
           where: { id: variant.sizeId },
@@ -135,26 +127,32 @@ export async function PATCH(
           return new NextResponse("Invalid color in variant", { status: 400 });
         }
       }
-      if (variant.sku && !variant.id) {
-        const existingVariant = await db.variant.findFirst({
-          where: {
-            sku: variant.sku,
-          },
+      if (variant.slug) {
+        const existingVariant = await db.variant.findUnique({
+          where: { slug: variant.slug },
         });
-        if (existingVariant) {
+        if (existingVariant && existingVariant.id !== variant.id) {
+          return new NextResponse(`Slug ${variant.slug} already exists`, {
+            status: 400,
+          });
+        }
+      }
+      if (variant.sku) {
+        const existingVariant = await db.variant.findUnique({
+          where: { sku: variant.sku },
+        });
+        if (existingVariant && existingVariant.id !== variant.id) {
           return new NextResponse(`SKU ${variant.sku} already exists`, {
             status: 400,
           });
         }
       }
 
-      if (variant.hsn && !variant.id) {
-        const existingVariant = await db.variant.findFirst({
-          where: {
-            hsn: variant.hsn,
-          },
+      if (variant.hsn) {
+        const existingVariant = await db.variant.findUnique({
+          where: { hsn: variant.hsn },
         });
-        if (existingVariant) {
+        if (existingVariant && existingVariant.id !== variant.id) {
           return new NextResponse(`HSN ${variant.hsn} already exists`, {
             status: 400,
           });
@@ -190,11 +188,8 @@ export async function PATCH(
     const product = await db.product.update({
       where: { id: params.productId },
       data: {
-        name,
-        slug,
         brandId,
-        about,
-        description,
+        sizeAndFit,
         materialAndCare,
         enabledFeatures,
         expressDelivery,
@@ -204,17 +199,6 @@ export async function PATCH(
         isArchieved,
         categoryId,
         subCategoryId,
-        metaTitle,
-        metaDescription,
-        metaKeywords,
-        openGraphImage,
-        productSpecifications: {
-          deleteMany: {},
-          create: specifications?.map((spec) => ({
-            specificationFieldId: spec.specificationFieldId,
-            value: spec.value,
-          })),
-        },
         variants: {
           deleteMany: {
             id: {
@@ -224,6 +208,14 @@ export async function PATCH(
           create: variants
             .filter((v) => !v.id)
             .map((variant) => ({
+              name: variant.name,
+              slug: variant.slug,
+              about: variant.about,
+              description: variant.description,
+              metaTitle: variant.metaTitle,
+              metaDescription: variant.metaDescription,
+              metaKeywords: variant.metaKeywords,
+              openGraphImage: variant.openGraphImage,
               stock: variant.stock,
               sku: variant.sku || undefined,
               hsn: variant.hsn || undefined,
@@ -244,12 +236,26 @@ export async function PATCH(
                   mrp: vp.mrp,
                 })),
               },
+              variantSpecifications: {
+                create: variant.specifications?.map((spec) => ({
+                  specificationFieldId: spec.specificationFieldId,
+                  value: spec.value,
+                })),
+              },
             })),
           update: variants
             .filter((v) => v.id)
             .map((variant) => ({
               where: { id: variant.id! },
               data: {
+                name: variant.name,
+                slug: variant.slug,
+                about: variant.about,
+                description: variant.description,
+                metaTitle: variant.metaTitle,
+                metaDescription: variant.metaDescription,
+                metaKeywords: variant.metaKeywords,
+                openGraphImage: variant.openGraphImage,
                 stock: variant.stock,
                 sku: variant.sku || undefined,
                 hsn: variant.hsn || undefined,
@@ -272,6 +278,13 @@ export async function PATCH(
                     mrp: vp.mrp,
                   })),
                 },
+                variantSpecifications: {
+                  deleteMany: {},
+                  create: variant.specifications?.map((spec) => ({
+                    specificationFieldId: spec.specificationFieldId,
+                    value: spec.value,
+                  })),
+                },
               },
             })),
         },
@@ -286,9 +299,9 @@ export async function PATCH(
                 locationGroup: true,
               },
             },
+            variantSpecifications: true,
           },
         },
-        productSpecifications: true,
       },
     });
 
@@ -336,14 +349,8 @@ export async function DELETE(
       return new NextResponse("Store does not exist", { status: 404 });
     }
 
-    const product = await db.$transaction(async (prisma) => {
-      await prisma.productSpecification.deleteMany({
-        where: { productId: params.productId },
-      });
-
-      return await prisma.product.delete({
-        where: { id: params.productId },
-      });
+    const product = await db.product.delete({
+      where: { id: params.productId },
     });
 
     return NextResponse.json(product);
@@ -420,6 +427,9 @@ export async function GET(
           },
         },
         variants: {
+          orderBy: {
+            createdAt: "asc",
+          },
           include: {
             size: true,
             color: true,
@@ -436,13 +446,13 @@ export async function GET(
                 },
               },
             },
-          },
-        },
-        productSpecifications: {
-          include: {
-            specificationField: {
+            variantSpecifications: {
               include: {
-                group: true,
+                specificationField: {
+                  include: {
+                    group: true,
+                  },
+                },
               },
             },
           },
@@ -458,20 +468,6 @@ export async function GET(
     if (!product) {
       return new NextResponse("Product not found", { status: 404, headers });
     }
-
-    // const ratings = product.reviews.map((review) => review.rating);
-    // const numberOfRatings = ratings.length;
-    // const averageRating =
-    //   numberOfRatings > 0
-    //     ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
-    //     : 0;
-
-    // const { reviews, ...productWithoutReviews } = product;
-    // const productWithRatings = {
-    //   ...productWithoutReviews,
-    //   averageRating: Number(averageRating.toFixed(2)),
-    //   numberOfRatings,
-    // };
 
     let relatedProducts: any[] = [];
     if (includeRelated && product.categoryId) {
@@ -490,6 +486,9 @@ export async function GET(
             },
           },
           variants: {
+            orderBy: {
+              createdAt: "asc",
+            },
             include: {
               size: true,
               color: true,
@@ -502,13 +501,13 @@ export async function GET(
                   locationGroup: true,
                 },
               },
-            },
-          },
-          productSpecifications: {
-            include: {
-              specificationField: {
+              variantSpecifications: {
                 include: {
-                  group: true,
+                  specificationField: {
+                    include: {
+                      group: true,
+                    },
+                  },
                 },
               },
             },
@@ -524,21 +523,6 @@ export async function GET(
           createdAt: "desc",
         },
       });
-
-      // relatedProducts = relatedProducts.map((p) => {
-      //   const ratings = p.reviews.map((r) => r.rating);
-      //   const numberOfRatings = ratings.length;
-      //   const averageRating =
-      //     numberOfRatings > 0
-      //       ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
-      //       : 0;
-      //   const { reviews, ...rest } = p;
-      //   return {
-      //     ...rest,
-      //     averageRating: Number(averageRating.toFixed(2)),
-      //     numberOfRatings,
-      //   };
-      // });
     }
 
     const response = {

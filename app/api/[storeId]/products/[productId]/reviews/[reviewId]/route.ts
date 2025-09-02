@@ -1,22 +1,28 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+const allowedOrigins = [
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  "http://localhost:3000",
+  "https://favobliss.vercel.app",
+].filter(Boolean);
+
 export async function DELETE(
   request: Request,
   { params }: { params: { productId: string; reviewId: string } }
 ) {
-  // Set CORS headers
+  const origin = request.headers.get("origin");
+  const corsOrigin = allowedOrigins.includes(origin ?? "")
+    ? origin ?? ""
+    : allowedOrigins[0];
+
   const headers = {
-    "Access-Control-Allow-Origin":
-      process.env.NEXT_PUBLIC_FRONTEND_URL ||
-      "http://localhost:3000" ||
-      "http://localhost:3001" ||
-      "https://favobliss.vercel.app",
+    "Access-Control-Allow-Origin": corsOrigin || "",
     "Access-Control-Allow-Methods": "DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
   };
 
-  // Handle preflight OPTIONS request
   if (request.method === "OPTIONS") {
     return new NextResponse(null, { status: 204, headers });
   }

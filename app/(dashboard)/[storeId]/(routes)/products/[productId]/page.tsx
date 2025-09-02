@@ -22,6 +22,9 @@ const ProductPage = async ({
           },
         },
         variants: {
+          orderBy: {
+            createdAt: "asc",
+          },
           include: {
             size: true,
             color: true,
@@ -31,13 +34,13 @@ const ProductPage = async ({
                 locationGroup: true,
               },
             },
-          },
-        },
-        productSpecifications: {
-          include: {
-            specificationField: {
+            variantSpecifications: {
               include: {
-                group: true,
+                specificationField: {
+                  include: {
+                    group: true,
+                  },
+                },
               },
             },
           },

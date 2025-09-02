@@ -73,7 +73,6 @@ export async function GET(
       });
       if (!locationGroup) {
         console.log(`No location group found for pincode: ${pincode}`);
-        // Optionally, proceed with default pricing
       }
     }
 
@@ -164,6 +163,9 @@ export async function GET(
           },
         },
         variants: {
+          orderBy: {
+            createdAt: "asc",
+          },
           include: {
             size: true,
             color: true,
@@ -176,13 +178,13 @@ export async function GET(
                 locationGroup: true,
               },
             },
-          },
-        },
-        productSpecifications: {
-          include: {
-            specificationField: {
+            variantSpecifications: {
               include: {
-                group: true,
+                specificationField: {
+                  include: {
+                    group: true,
+                  },
+                },
               },
             },
           },
@@ -209,7 +211,7 @@ export async function GET(
             ? ratings.reduce((sum, rating) => sum + rating, 0) / numberOfRatings
             : 0;
 
-        // Map variants to include price from variantPrices
+        // Map variants to include price and variant-specific fields
         const updatedVariants = product.variants.map((variant) => {
           const price = variant.variantPrices[0]?.price || 0; // Use first price or 0 as fallback
           return {

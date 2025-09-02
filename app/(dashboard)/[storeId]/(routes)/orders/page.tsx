@@ -54,7 +54,7 @@ const OrdersPage = async ({ params }: { params: { storeId: string } }) => {
           .map((orderItem) => {
             const variant = orderItem.variant;
             const details = [
-              variant.product.name,
+              variant.name,
               variant.size?.value ? `(${variant.size.value}` : "",
               variant.color?.name ? `${variant.color.name})` : "",
             ]

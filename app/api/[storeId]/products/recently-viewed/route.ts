@@ -57,6 +57,9 @@ export async function POST(
           },
         },
         variants: {
+          orderBy: {
+            createdAt: "asc",
+          },
           include: {
             size: true,
             color: true,
@@ -67,13 +70,13 @@ export async function POST(
                 locationGroup: true,
               },
             },
-          },
-        },
-        productSpecifications: {
-          include: {
-            specificationField: {
+            variantSpecifications: {
               include: {
-                group: true,
+                specificationField: {
+                  include: {
+                    group: true,
+                  },
+                },
               },
             },
           },
