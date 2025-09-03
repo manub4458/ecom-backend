@@ -148,13 +148,16 @@ const Editor: React.FC<EditorProps> = ({ value, onChange, disabled }) => {
 
       isMounted.current = true;
 
-      if (value) {
-        quillRef.current.root.innerHTML = value;
-      }
+      // Always set the initial value, handling empty string
+      quillRef.current.root.innerHTML = value || "<p><br></p>";
 
       quillRef.current.on("text-change", () => {
         if (!isUpdating.current) {
-          const content = quillRef.current?.root.innerHTML || "";
+          let content = quillRef.current?.root.innerHTML || "";
+          // Treat <p><br></p> as empty
+          if (content === "<p><br></p>") {
+            content = "";
+          }
           onChange(content);
         }
       });
@@ -176,10 +179,17 @@ const Editor: React.FC<EditorProps> = ({ value, onChange, disabled }) => {
   }, []);
 
   useEffect(() => {
-    if (quillRef.current && value !== quillRef.current.root.innerHTML) {
-      isUpdating.current = true;
-      quillRef.current.root.innerHTML = value || "";
-      isUpdating.current = false;
+    if (quillRef.current) {
+      const currentContent = quillRef.current.root.innerHTML;
+      let newValue = value;
+      if (newValue === "") {
+        newValue = "<p><br></p>";
+      }
+      if (newValue !== currentContent) {
+        isUpdating.current = true;
+        quillRef.current.root.innerHTML = newValue;
+        isUpdating.current = false;
+      }
     }
   }, [value]);
 

@@ -17,70 +17,25 @@ import { MediaUpload } from "@/components/store/utils/media-upload";
 import { ProductFeatures } from "@/components/store/utils/product-features";
 import { SpecificationInput } from "@/components/store/utils/specification-input";
 import Editor from "./editor";
+import { useFormContext, useFieldArray } from "react-hook-form";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import * as z from "zod";
+import { ProductSchema } from "@/schemas/product-form-schema";
 
 interface VariantFormProps {
-  value: Array<{
-    id?: string;
-    sizeId?: string | null;
-    colorId?: string | null;
-    stock: number;
-    media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
-    sku?: string;
-    hsn?: string;
-    tax?: number;
-    gstIn?: string;
-    variantPrices: Array<{
-      locationGroupId: string;
-      price: number;
-      mrp: number;
-    }>;
-    name: string;
-    slug: string;
-    about?: string;
-    description: string;
-    metaTitle?: string;
-    metaDescription?: string;
-    metaKeywords?: string[];
-    openGraphImage?: string;
-    specifications?: Array<{
-      specificationFieldId: string;
-      value: string;
-    }>;
-  }>;
-  onChange: (
-    value: Array<{
-      id?: string;
-      sizeId?: string | null;
-      colorId?: string | null;
-      stock: number;
-      media: Array<{ url: string; mediaType: "IMAGE" | "VIDEO" }>;
-      sku?: string;
-      hsn?: string;
-      tax?: number;
-      gstIn?: string;
-      variantPrices: Array<{
-        locationGroupId: string;
-        price: number;
-        mrp: number;
-      }>;
-      name: string;
-      slug: string;
-      about?: string;
-      description: string;
-      metaTitle?: string;
-      metaDescription?: string;
-      metaKeywords?: string[];
-      openGraphImage?: string;
-      specifications?: Array<{
-        specificationFieldId: string;
-        value: string;
-      }>;
-    }>
-  ) => void;
+  index: number;
+  remove: () => void;
   sizes: Size[];
   colors: Color[];
   locationGroups: LocationGroup[];
   specificationFields: (SpecificationField & { group: { name: string } })[];
+  disabled: boolean;
 }
 
 interface NumberInputProps {
@@ -126,375 +81,391 @@ const NumberInput = ({
 };
 
 export default function VariantForm({
-  value,
-  onChange,
+  index,
+  remove,
   sizes,
   colors,
   locationGroups,
   specificationFields,
+  disabled,
 }: VariantFormProps) {
-  const [loading, setLoading] = useState(false);
+  const form = useFormContext<z.infer<typeof ProductSchema>>();
+  const { control, getValues } = form;
 
-  // Validate that all variants have at least one price
-  const validateVariants = () => {
-    if (locationGroups.length === 0) {
-      toast.error("No location groups available. Please add at least one.");
-      return false;
-    }
-    return value.every((variant) => variant.variantPrices.length > 0);
-  };
-
-  const addVariant = () => {
-    if (locationGroups.length === 0) {
-      toast.error("Cannot add variant: No location groups available.");
-      return;
-    }
-    onChange([
-      ...value,
-      {
-        name: "",
-        slug: "",
-        about: "",
-        description: "",
-        metaTitle: "",
-        metaDescription: "",
-        metaKeywords: [],
-        openGraphImage: "",
-        stock: 0,
-        media: [],
-        sku: "",
-        hsn: "",
-        tax: 0,
-        gstIn: "",
-        sizeId: null,
-        colorId: null,
-        specifications: [],
-        variantPrices: [
-          {
-            locationGroupId: locationGroups[0].id,
-            price: 0,
-            mrp: 0,
-          },
-        ],
-      },
-    ]);
-  };
-
-  const removeVariant = (index: number) => {
-    onChange(value.filter((_, i) => i !== index));
-  };
-
-  const updateVariant = (index: number, updatedVariant: any) => {
-    const newVariants = [...value];
-    newVariants[index] = { ...newVariants[index], ...updatedVariant };
-    onChange(newVariants);
-  };
-
-  const addPrice = (variantIndex: number) => {
-    if (locationGroups.length === 0) {
-      toast.error("Cannot add price: No location groups available.");
-      return;
-    }
-    const newVariants = [...value];
-    newVariants[variantIndex].variantPrices.push({
-      locationGroupId: locationGroups[0].id,
-      price: 0,
-      mrp: 0,
-    });
-    onChange(newVariants);
-  };
-
-  const removePrice = (variantIndex: number, priceIndex: number) => {
-    const newVariants = [...value];
-    if (newVariants[variantIndex].variantPrices.length <= 1) {
-      toast.error("Each variant must have at least one price.");
-      return;
-    }
-    newVariants[variantIndex].variantPrices = newVariants[
-      variantIndex
-    ].variantPrices.filter((_, i) => i !== priceIndex);
-    onChange(newVariants);
-  };
-
-  const updatePrice = (
-    variantIndex: number,
-    priceIndex: number,
-    updatedPrice: any
-  ) => {
-    const newVariants = [...value];
-    newVariants[variantIndex].variantPrices[priceIndex] = updatedPrice;
-    onChange(newVariants);
-  };
+  const {
+    fields: priceFields,
+    append: appendPrice,
+    remove: removePrice,
+  } = useFieldArray({
+    control,
+    name: `variants.${index}.variantPrices`,
+  });
 
   return (
-    <div className="space-y-4">
-      {value.map((variant, variantIndex) => (
-        <div key={variantIndex} className="border p-4 rounded-md">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="font-medium">Variant #{variantIndex + 1}</h4>
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              onClick={() => removeVariant(variantIndex)}
-              disabled={loading}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+    <div className="border p-4 rounded-md">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="font-medium">Variant #{index + 1}</h4>
+        <Button
+          type="button"
+          variant="destructive"
+          size="icon"
+          onClick={remove}
+          disabled={disabled}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
-              <Input
-                value={variant.name || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, { name: e.target.value })
-                }
-                placeholder="Variant name"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Slug</label>
-              <Input
-                value={variant.slug || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, { slug: e.target.value })
-                }
-                placeholder="Variant slug"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">About</label>
-              <Input
-                value={variant.about || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, { about: e.target.value })
-                }
-                placeholder="About variant"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Description
-              </label>
-              <Editor
-                value={variant.description || ""}
-                onChange={(value) =>
-                  updateVariant(variantIndex, { description: value })
-                }
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Meta Title
-              </label>
-              <Input
-                value={variant.metaTitle || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, { metaTitle: e.target.value })
-                }
-                placeholder="SEO meta title (max 60 characters)"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Meta Description
-              </label>
-              <Input
-                value={variant.metaDescription || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, {
-                    metaDescription: e.target.value,
-                  })
-                }
-                placeholder="SEO meta description (max 160 characters)"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Open Graph Image URL
-              </label>
-              <Input
-                value={variant.openGraphImage || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, {
-                    openGraphImage: e.target.value,
-                  })
-                }
-                placeholder="URL for Open Graph image"
-                disabled={loading}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Meta Keywords
-              </label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField
+          control={control}
+          name={`variants.${index}.name`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Variant name"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.slug`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Slug</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Variant slug"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.about`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>About</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="About variant"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.description`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Editor
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.metaTitle`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Meta Title</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="SEO meta title (max 60 characters)"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.metaDescription`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Meta Description</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="SEO meta description (max 160 characters)"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.openGraphImage`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Open Graph Image URL</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="URL for Open Graph image"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.metaKeywords`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>Meta Keywords</FormLabel>
               <ProductFeatures
-                value={variant.metaKeywords || []}
-                disabled={loading}
+                value={field.value || []}
+                disabled={disabled}
                 onChange={(value) =>
-                  updateVariant(variantIndex, {
-                    metaKeywords: [...(variant.metaKeywords || []), value],
-                  })
+                  field.onChange([...(field.value || []), value])
                 }
                 onRemove={(value) =>
-                  updateVariant(variantIndex, {
-                    metaKeywords: (variant.metaKeywords || []).filter(
-                      (data) => data !== value
-                    ),
-                  })
+                  field.onChange(
+                    (field.value || []).filter((data) => data !== value)
+                  )
                 }
               />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Specifications
-              </label>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.specifications`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>Specifications</FormLabel>
               <SpecificationInput
-                value={variant.specifications || []}
-                disabled={loading}
+                value={field.value || []}
+                disabled={disabled}
                 specificationFields={specificationFields}
-                onChange={(specifications) =>
-                  updateVariant(variantIndex, { specifications })
-                }
+                onChange={field.onChange}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Size</label>
-              <select
-                value={variant.sizeId ?? "none"}
-                onChange={(e) =>
-                  updateVariant(variantIndex, {
-                    sizeId: e.target.value === "none" ? null : e.target.value,
-                  })
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.sizeId`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Size</FormLabel>
+              <Select
+                disabled={disabled}
+                onValueChange={(val) =>
+                  field.onChange(val === "none" ? null : val)
                 }
-                className="w-full p-2 border rounded"
-                disabled={loading}
+                value={field.value ?? "none"}
               >
-                <option value="none">None</option>
-                {sizes.map((size) => (
-                  <option key={size.id} value={size.id}>
-                    {size.name} ({size.value})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Color</label>
-              <select
-                value={variant.colorId ?? "none"}
-                onChange={(e) =>
-                  updateVariant(variantIndex, {
-                    colorId: e.target.value === "none" ? null : e.target.value,
-                  })
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select size" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {sizes.map((size) => (
+                    <SelectItem key={size.id} value={size.id}>
+                      {size.name} ({size.value})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.colorId`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Color</FormLabel>
+              <Select
+                disabled={disabled}
+                onValueChange={(val) =>
+                  field.onChange(val === "none" ? null : val)
                 }
-                className="w-full p-2 border rounded"
-                disabled={loading}
+                value={field.value ?? "none"}
               >
-                <option value="none">None</option>
-                {colors.map((color) => (
-                  <option key={color.id} value={color.id}>
-                    {color.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Stock</label>
-              <NumberInput
-                value={variant.stock}
-                onChange={(num) => updateVariant(variantIndex, { stock: num })}
-                placeholder="Enter stock"
-                disabled={loading}
-                min={0}
-                step={1}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">SKU</label>
-              <Input
-                value={variant.sku || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, { sku: e.target.value })
-                }
-                placeholder="Enter SKU"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">HSN Code</label>
-              <Input
-                value={variant.hsn || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, { hsn: e.target.value })
-                }
-                placeholder="Enter HSN Code"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                GSTIN Number
-              </label>
-              <Input
-                value={variant.gstIn || ""}
-                onChange={(e) =>
-                  updateVariant(variantIndex, { gstIn: e.target.value })
-                }
-                placeholder="Enter GSTIN Number"
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Tax</label>
-              <NumberInput
-                value={variant.tax ? variant.tax : 0}
-                onChange={(num) => updateVariant(variantIndex, { tax: num })}
-                placeholder="Enter Tax"
-                disabled={loading}
-                min={0}
-                step={1}
-              />
-            </div>
-            <div className="mt-4 md:col-span-2">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="font-medium">Prices by Location Group</h4>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addPrice(variantIndex)}
-                  disabled={loading || locationGroups.length === 0}
-                >
-                  Add Price
-                </Button>
-              </div>
-              {variant.variantPrices.length === 0 && (
-                <p className="text-destructive text-sm mb-2">
-                  At least one price per location group is required.
-                </p>
-              )}
-              {variant.variantPrices.map((price, priceIndex) => (
-                <div
-                  key={priceIndex}
-                  className="border p-3 rounded-md flex items-center gap-4 mb-2"
-                >
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">
-                      Location Group
-                    </label>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select color" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {colors.map((color) => (
+                    <SelectItem key={color.id} value={color.id}>
+                      {color.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.stock`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Stock</FormLabel>
+              <FormControl>
+                <NumberInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Enter stock"
+                  disabled={disabled}
+                  min={0}
+                  step={1}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.sku`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>SKU</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Enter SKU" disabled={disabled} />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.hsn`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>HSN Code</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Enter HSN Code"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.gstIn`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>GSTIN Number</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Enter GSTIN Number"
+                  disabled={disabled}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name={`variants.${index}.tax`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tax</FormLabel>
+              <FormControl>
+                <NumberInput
+                  value={field.value as number}
+                  onChange={field.onChange}
+                  placeholder="Enter Tax"
+                  disabled={disabled}
+                  min={0}
+                  step={1}
+                />
+              </FormControl>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+        <div className="mt-4 md:col-span-2">
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="font-medium">Prices by Location Group</h4>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                appendPrice({
+                  locationGroupId: locationGroups[0].id,
+                  price: 0,
+                  mrp: 0,
+                })
+              }
+              disabled={disabled || locationGroups.length === 0}
+            >
+              Add Price
+            </Button>
+          </div>
+          {priceFields.length === 0 && (
+            <p className="text-destructive text-sm mb-2">
+              At least one price per location group is required.
+            </p>
+          )}
+          {priceFields.map((priceField, priceIndex) => (
+            <div
+              key={priceField.id}
+              className="border p-3 rounded-md flex items-center gap-4 mb-2"
+            >
+              <FormField
+                control={control}
+                name={`variants.${index}.variantPrices.${priceIndex}.locationGroupId`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Location Group</FormLabel>
                     <Select
-                      disabled={loading}
+                      disabled={disabled}
                       onValueChange={(val) => {
+                        const currentPrices = getValues(
+                          `variants.${index}.variantPrices`
+                        );
                         if (
-                          variant.variantPrices.some(
+                          currentPrices.some(
                             (p, i) =>
                               i !== priceIndex && p.locationGroupId === val
                           )
@@ -506,12 +477,9 @@ export default function VariantForm({
                           );
                           return;
                         }
-                        updatePrice(variantIndex, priceIndex, {
-                          ...price,
-                          locationGroupId: val,
-                        });
+                        field.onChange(val);
                       }}
-                      value={price.locationGroupId}
+                      value={field.value}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a location group" />
@@ -524,82 +492,81 @@ export default function VariantForm({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">
-                      MRP (INR)
-                    </label>
-                    <NumberInput
-                      value={price.mrp}
-                      onChange={(num) =>
-                        updatePrice(variantIndex, priceIndex, {
-                          ...price,
-                          mrp: num,
-                        })
-                      }
-                      placeholder="Enter MRP"
-                      disabled={loading}
-                      min={0}
-                      step={1}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium mb-1">
-                      Price (INR)
-                    </label>
-                    <NumberInput
-                      value={price.price}
-                      onChange={(num) =>
-                        updatePrice(variantIndex, priceIndex, {
-                          ...price,
-                          price: num,
-                        })
-                      }
-                      placeholder="Enter price"
-                      disabled={loading}
-                      min={0}
-                      step={1}
-                    />
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removePrice(variantIndex, priceIndex)}
-                    disabled={loading || variant.variantPrices.length <= 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                    <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={`variants.${index}.variantPrices.${priceIndex}.mrp`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>MRP (INR)</FormLabel>
+                    <FormControl>
+                      <NumberInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Enter MRP"
+                        disabled={disabled}
+                        min={0}
+                        step={1}
+                      />
+                    </FormControl>
+                    <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={`variants.${index}.variantPrices.${priceIndex}.price`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Price (INR)</FormLabel>
+                    <FormControl>
+                      <NumberInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Enter price"
+                        disabled={disabled}
+                        min={0}
+                        step={1}
+                      />
+                    </FormControl>
+                    <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => removePrice(priceIndex)}
+                disabled={disabled || priceFields.length <= 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Media (Images/Videos)
-              </label>
+          ))}
+        </div>
+        <FormField
+          control={control}
+          name={`variants.${index}.media`}
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>Media (Images/Videos)</FormLabel>
               <MediaUpload
-                value={variant.media}
-                disabled={loading}
-                onChange={(media) => updateVariant(variantIndex, { media })}
+                value={field.value}
+                disabled={disabled}
+                onChange={field.onChange}
                 onRemove={(url) =>
-                  updateVariant(variantIndex, {
-                    media: variant.media.filter((m) => m.url !== url),
-                  })
+                  field.onChange(field.value.filter((m) => m.url !== url))
                 }
               />
-            </div>
-          </div>
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={addVariant}
-        disabled={loading || locationGroups.length === 0}
-      >
-        Add Variant
-      </Button>
+              <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+            </FormItem>
+          )}
+        />
+      </div>
     </div>
   );
 }

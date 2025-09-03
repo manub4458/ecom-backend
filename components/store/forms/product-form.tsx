@@ -14,7 +14,7 @@ import {
   VariantImage,
   LocationGroup,
 } from "@prisma/client";
-import { useForm, FieldError } from "react-hook-form";
+import { useForm, FieldError, useFormContext, useFieldArray } from "react-hook-form";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -180,6 +180,11 @@ export const ProductForm = ({
   });
   // console.log("Form values:", values);
   console.log("Form errors:", form.formState.errors);
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "variants",
+  });
 
   const onSubmit = async (values: z.infer<typeof ProductSchema>) => {
     if (locationGroups.length === 0) {
@@ -566,26 +571,62 @@ export const ProductForm = ({
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="variants"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Variants</FormLabel>
-                <FormControl>
-                  <VariantForm
-                    value={field.value}
-                    onChange={field.onChange}
-                    sizes={sizes}
-                    colors={colors}
-                    locationGroups={locationGroups}
-                    specificationFields={specificationFields}
-                  />
-                </FormControl>
-                <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
-              </FormItem>
-            )}
-          />
+          <FormItem>
+            <FormLabel>Variants</FormLabel>
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <VariantForm
+                  key={field.id}
+                  index={index}
+                  remove={() => remove(index)}
+                  sizes={sizes}
+                  colors={colors}
+                  specificationFields={specificationFields}
+                  locationGroups={locationGroups}
+                  disabled={loading}
+                />
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                append({
+                  name: "",
+                  slug: "",
+                  about: "",
+                  description: "",
+                  metaTitle: "",
+                  metaDescription: "",
+                  metaKeywords: [],
+                  openGraphImage: "",
+                  stock: 0,
+                  media: [],
+                  sizeId: undefined,
+                  colorId: undefined,
+                  sku: "",
+                  hsn: "",
+                  tax: 0,
+                  gstIn: "",
+                  specifications: [],
+                  variantPrices:
+                    locationGroups.length > 0
+                      ? [
+                          {
+                            locationGroupId: locationGroups[0].id,
+                            price: 0,
+                            mrp: 0,
+                          },
+                        ]
+                      : [],
+                })
+              }
+              disabled={loading || locationGroups.length === 0}
+            >
+              Add Variant
+            </Button>
+            <FormMessage className="w-full px-2 py-2 bg-destructive/20 text-destructive/70 rounded-md" />
+          </FormItem>
           <Button type="submit" disabled={loading}>
             {actions}
           </Button>
