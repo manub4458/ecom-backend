@@ -55,10 +55,10 @@ const NumberInput = ({
   min,
   step,
 }: NumberInputProps) => {
-  const [localValue, setLocalValue] = useState(value.toString());
+  const [localValue, setLocalValue] = useState(value?.toString());
 
   useEffect(() => {
-    setLocalValue(value.toString());
+    setLocalValue(value?.toString());
   }, [value]);
 
   return (
